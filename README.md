@@ -23,7 +23,7 @@ Tempura is currently ad-hoc signed, not notarized with Apple Developer ID, so ma
 - Opens a compact panel with the last 60 seconds of local thermal history.
 - Colors readings by temperature range.
 - Can open automatically when you log in.
-- Shows version details and opens the latest release page from an inline settings panel when requested.
+- Shows version details and opens the latest release page from a separate settings window when requested.
 - Provides a `Quit Tempura` button in the panel.
 - Prevents duplicate app instances.
 - Stays local-only while monitoring: no background network calls, telemetry, fan control, or SMC writes.

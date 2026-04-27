@@ -9,6 +9,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private let quitMenu = NSMenu()
     private let panelViewController = ThermalPanelViewController()
     private let popover = NSPopover()
+    private let settingsWindowController = SettingsWindowController()
 
     private var timer: Timer?
     private var readInFlight = false
@@ -96,8 +97,13 @@ final class StatusController: NSObject, NSPopoverDelegate {
         popover.contentSize = ThermalPanelViewController.preferredContentSize
         popover.contentViewController = panelViewController
         popover.delegate = self
-        panelViewController.contentSizeDidChange = { [weak self] size in
-            self?.popover.contentSize = size
+        panelViewController.settingsRequested = { [weak self] in
+            guard let self else {
+                return
+            }
+
+            self.closePanel()
+            self.settingsWindowController.showSettingsWindow()
         }
     }
 
@@ -118,7 +124,6 @@ final class StatusController: NSObject, NSPopoverDelegate {
             samples: history.samples,
             currentReading: currentReading
         )
-        panelViewController.collapseSettings()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         button.highlight(true)
         installDismissMonitors()
