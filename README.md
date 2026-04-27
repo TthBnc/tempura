@@ -62,3 +62,9 @@ The packaged app is preferred for daily use because `Packaging/Info.plist` sets 
 - Shows a rolling 60-second local temperature chart with dynamic y-axis scaling.
 - Provides `Quit Tempura` at the bottom of the panel and a right-click or Control-click `Quit` menu.
 - Ignores duplicate launches while Tempura is already running.
+
+## License
+
+Tempura is released under the MIT License. It is provided as-is, without warranty or liability. See `LICENSE`.
+
+Tempura adapts read-only SMC access patterns and temperature sensor key mappings from Stats. See `THIRD_PARTY_NOTICES.md`.
