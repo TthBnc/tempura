@@ -19,6 +19,10 @@ Install from the DMG:
 
 Tempura is currently ad-hoc signed, not notarized with Apple Developer ID, so macOS may ask you to confirm before opening it.
 
+## Compatibility
+
+Tempura requires macOS 13 Ventura or newer.
+
 ## What It Does
 
 - Shows a live Celsius temperature in the macOS menu bar.
