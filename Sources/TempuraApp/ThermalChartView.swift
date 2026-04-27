@@ -1,12 +1,38 @@
 import AppKit
+import QuartzCore
 import TempuraCore
 
 final class ThermalChartView: NSView {
     var samples: [TemperatureSample] = [] {
         didSet {
-            needsDisplay = true
+            animateSamplesChange()
         }
     }
+
+    private struct ChartState {
+        let samples: [TemperatureSample]
+        let range: ClosedRange<Double>?
+        let latestDate: Date
+
+        init(samples: [TemperatureSample]) {
+            self.samples = samples
+            range = TemperatureHistory(samples: samples).dynamicRange()
+            latestDate = samples.last?.date ?? Date()
+        }
+
+        init(samples: [TemperatureSample], range: ClosedRange<Double>?, latestDate: Date) {
+            self.samples = samples
+            self.range = range
+            self.latestDate = latestDate
+        }
+    }
+
+    private var presentationState = ChartState(samples: [])
+    private var animationStartState: ChartState?
+    private var animationTargetState: ChartState?
+    private var animationStartTime: CFTimeInterval = 0
+    private var animationTimer: Timer?
+    private let animationDuration: CFTimeInterval = 0.42
 
     override var isFlipped: Bool {
         true
@@ -14,13 +40,16 @@ final class ThermalChartView: NSView {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        wantsLayer = true
-        layer?.cornerRadius = 8
-        layer?.masksToBounds = true
+        configureLayer()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        configureLayer()
+    }
+
+    isolated deinit {
+        stopAnimation()
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -33,13 +62,19 @@ final class ThermalChartView: NSView {
         let plotRect = plotRect(in: chartRect)
         drawGrid(in: plotRect)
 
-        guard !samples.isEmpty else {
+        guard !presentationState.samples.isEmpty else {
             drawEmptyState(in: chartRect)
             return
         }
 
-        drawSeries(in: plotRect)
-        drawAxisLabels(in: chartRect)
+        drawSeries(in: plotRect, state: presentationState)
+        drawAxisLabels(in: chartRect, state: presentationState)
+    }
+
+    private func configureLayer() {
+        wantsLayer = true
+        layer?.cornerRadius = 8
+        layer?.masksToBounds = true
     }
 
     private func drawBackground(in rect: NSRect) {
@@ -81,8 +116,8 @@ final class ThermalChartView: NSView {
         )
     }
 
-    private func drawSeries(in rect: NSRect) {
-        let points = plottedPoints(in: rect)
+    private func drawSeries(in rect: NSRect, state: ChartState) {
+        let points = plottedPoints(in: rect, state: state)
 
         guard points.count > 1 else {
             drawPoint(points.first?.point, celsius: points.first?.sample.celsius)
@@ -121,8 +156,8 @@ final class ThermalChartView: NSView {
         dot.fill()
     }
 
-    private func drawAxisLabels(in rect: NSRect) {
-        guard let range = dynamicRange() else {
+    private func drawAxisLabels(in rect: NSRect, state: ChartState) {
+        guard let range = state.range else {
             return
         }
 
@@ -167,16 +202,15 @@ final class ThermalChartView: NSView {
         )
     }
 
-    private func plottedPoints(in rect: NSRect) -> [(sample: TemperatureSample, point: NSPoint)] {
-        guard let range = dynamicRange() else {
+    private func plottedPoints(in rect: NSRect, state: ChartState) -> [(sample: TemperatureSample, point: NSPoint)] {
+        guard let range = state.range else {
             return []
         }
 
-        let latestDate = samples.last?.date ?? Date()
-        let startDate = latestDate.addingTimeInterval(-60)
+        let startDate = state.latestDate.addingTimeInterval(-60)
         let span = max(range.upperBound - range.lowerBound, 1)
 
-        return samples.map { sample in
+        return state.samples.map { sample in
             let xProgress = min(max(sample.date.timeIntervalSince(startDate) / 60, 0), 1)
             let yProgress = min(max((sample.celsius - range.lowerBound) / span, 0), 1)
 
@@ -190,10 +224,6 @@ final class ThermalChartView: NSView {
         }
     }
 
-    private func dynamicRange() -> ClosedRange<Double>? {
-        TemperatureHistory(samples: samples).dynamicRange()
-    }
-
     private func plotRect(in chartRect: NSRect) -> NSRect {
         NSRect(
             x: chartRect.minX,
@@ -201,5 +231,142 @@ final class ThermalChartView: NSView {
             width: max(chartRect.width - 42, 1),
             height: chartRect.height
         )
+    }
+
+    private func animateSamplesChange() {
+        let targetState = ChartState(samples: samples)
+
+        guard window != nil else {
+            stopAnimation()
+            presentationState = targetState
+            needsDisplay = true
+            return
+        }
+
+        let sourceState = currentPresentationState()
+
+        guard !sourceState.samples.isEmpty, !targetState.samples.isEmpty else {
+            stopAnimation()
+            presentationState = targetState
+            needsDisplay = true
+            return
+        }
+
+        animationStartState = sourceState
+        animationTargetState = targetState
+        animationStartTime = CACurrentMediaTime()
+
+        if animationTimer == nil {
+            let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.advanceAnimation()
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            animationTimer = timer
+        }
+
+        advanceAnimation()
+    }
+
+    private func advanceAnimation() {
+        guard let startState = animationStartState, let targetState = animationTargetState else {
+            stopAnimation()
+            return
+        }
+
+        let elapsed = CACurrentMediaTime() - animationStartTime
+        let rawProgress = min(max(elapsed / animationDuration, 0), 1)
+        let easedProgress = Self.easeInOut(rawProgress)
+
+        presentationState = Self.interpolate(from: startState, to: targetState, progress: easedProgress)
+        needsDisplay = true
+
+        if rawProgress >= 1 {
+            presentationState = targetState
+            stopAnimation()
+            needsDisplay = true
+        }
+    }
+
+    private func currentPresentationState() -> ChartState {
+        guard let startState = animationStartState, let targetState = animationTargetState else {
+            return presentationState
+        }
+
+        let elapsed = CACurrentMediaTime() - animationStartTime
+        let rawProgress = min(max(elapsed / animationDuration, 0), 1)
+        return Self.interpolate(from: startState, to: targetState, progress: Self.easeInOut(rawProgress))
+    }
+
+    private func stopAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
+        animationStartState = nil
+        animationTargetState = nil
+    }
+
+    private static func interpolate(from start: ChartState, to target: ChartState, progress: Double) -> ChartState {
+        let samples = interpolatedSamples(from: start, to: target, progress: progress)
+        let range = interpolatedRange(from: start.range, to: target.range, progress: progress)
+        let latestDate = interpolatedDate(from: start.latestDate, to: target.latestDate, progress: progress)
+
+        return ChartState(samples: samples, range: range, latestDate: latestDate)
+    }
+
+    private static func interpolatedSamples(
+        from start: ChartState,
+        to target: ChartState,
+        progress: Double
+    ) -> [TemperatureSample] {
+        let fallbackSample = start.samples.last
+
+        return target.samples.enumerated().map { index, targetSample in
+            let indexedStartSample = start.samples.indices.contains(index) ? start.samples[index] : nil
+            let startSample = start.samples.first { $0.date == targetSample.date }
+                ?? indexedStartSample
+                ?? fallbackSample
+                ?? targetSample
+
+            return TemperatureSample(
+                celsius: interpolate(from: startSample.celsius, to: targetSample.celsius, progress: progress),
+                date: interpolatedDate(from: startSample.date, to: targetSample.date, progress: progress)
+            )
+        }
+    }
+
+    private static func interpolatedRange(
+        from start: ClosedRange<Double>?,
+        to target: ClosedRange<Double>?,
+        progress: Double
+    ) -> ClosedRange<Double>? {
+        guard let target else {
+            return nil
+        }
+
+        guard let start else {
+            return target
+        }
+
+        return interpolate(from: start.lowerBound, to: target.lowerBound, progress: progress)
+            ... interpolate(from: start.upperBound, to: target.upperBound, progress: progress)
+    }
+
+    private static func interpolatedDate(from start: Date, to target: Date, progress: Double) -> Date {
+        Date(
+            timeIntervalSinceReferenceDate: interpolate(
+                from: start.timeIntervalSinceReferenceDate,
+                to: target.timeIntervalSinceReferenceDate,
+                progress: progress
+            )
+        )
+    }
+
+    private static func interpolate(from start: Double, to target: Double, progress: Double) -> Double {
+        start + ((target - start) * progress)
+    }
+
+    private static func easeInOut(_ progress: Double) -> Double {
+        progress * progress * (3 - (2 * progress))
     }
 }
