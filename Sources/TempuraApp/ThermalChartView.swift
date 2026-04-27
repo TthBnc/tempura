@@ -30,14 +30,15 @@ final class ThermalChartView: NSView {
         drawBackground(in: bounds)
 
         let chartRect = bounds.insetBy(dx: 12, dy: 12)
-        drawGrid(in: chartRect)
+        let plotRect = plotRect(in: chartRect)
+        drawGrid(in: plotRect)
 
         guard !samples.isEmpty else {
             drawEmptyState(in: chartRect)
             return
         }
 
-        drawSeries(in: chartRect)
+        drawSeries(in: plotRect)
         drawAxisLabels(in: chartRect)
     }
 
@@ -126,15 +127,44 @@ final class ThermalChartView: NSView {
         }
 
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .regular),
-            .foregroundColor: NSColor.tertiaryLabelColor
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .semibold),
+            .foregroundColor: NSColor(calibratedWhite: 0.86, alpha: 1)
         ]
 
         let high = "\(Int(range.upperBound.rounded()))°"
+        let midpoint = "\(Int(((range.lowerBound + range.upperBound) / 2).rounded()))°"
         let low = "\(Int(range.lowerBound.rounded()))°"
 
-        high.draw(at: NSPoint(x: rect.maxX - 30, y: rect.minY + 2), withAttributes: attributes)
-        low.draw(at: NSPoint(x: rect.maxX - 30, y: rect.maxY - 14), withAttributes: attributes)
+        drawAxisLabel(high, atY: rect.minY + 1, in: rect, attributes: attributes)
+        drawAxisLabel(midpoint, atY: rect.midY - 7, in: rect, attributes: attributes)
+        drawAxisLabel(low, atY: rect.maxY - 15, in: rect, attributes: attributes)
+    }
+
+    private func drawAxisLabel(
+        _ label: String,
+        atY y: CGFloat,
+        in rect: NSRect,
+        attributes: [NSAttributedString.Key: Any]
+    ) {
+        let size = label.size(withAttributes: attributes)
+        let labelRect = NSRect(
+            x: rect.maxX - size.width - 5,
+            y: y,
+            width: size.width + 4,
+            height: size.height + 2
+        )
+        let plate = NSBezierPath(roundedRect: labelRect, xRadius: 3.5, yRadius: 3.5)
+
+        NSColor(calibratedWhite: 0.12, alpha: 0.9).setFill()
+        plate.fill()
+        NSColor.white.withAlphaComponent(0.1).setStroke()
+        plate.lineWidth = 1
+        plate.stroke()
+
+        label.draw(
+            at: NSPoint(x: labelRect.minX + 2, y: labelRect.minY + 1),
+            withAttributes: attributes
+        )
     }
 
     private func plottedPoints(in rect: NSRect) -> [(sample: TemperatureSample, point: NSPoint)] {
@@ -162,5 +192,14 @@ final class ThermalChartView: NSView {
 
     private func dynamicRange() -> ClosedRange<Double>? {
         TemperatureHistory(samples: samples).dynamicRange()
+    }
+
+    private func plotRect(in chartRect: NSRect) -> NSRect {
+        NSRect(
+            x: chartRect.minX,
+            y: chartRect.minY,
+            width: max(chartRect.width - 42, 1),
+            height: chartRect.height
+        )
     }
 }
