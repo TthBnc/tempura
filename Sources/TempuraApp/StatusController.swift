@@ -15,6 +15,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var lastDisplayState: DisplayState?
     private var currentReading: TemperatureReading?
     private var history = TemperatureHistory(retention: 60)
+    private var localDismissMonitor: Any?
+    private var globalDismissMonitor: Any?
 
     init(provider: any TemperatureReadingProvider) {
         self.provider = provider
@@ -115,12 +117,88 @@ final class StatusController: NSObject, NSPopoverDelegate {
         )
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         button.highlight(true)
+        installDismissMonitors()
     }
 
     nonisolated func popoverDidClose(_ notification: Notification) {
         Task { @MainActor [weak self] in
-            self?.statusItem.button?.highlight(false)
+            guard let self else { return }
+            self.statusItem.button?.highlight(false)
+            self.removeDismissMonitors()
         }
+    }
+
+    private func closePanel() {
+        guard popover.isShown else {
+            return
+        }
+
+        popover.performClose(nil)
+        statusItem.button?.highlight(false)
+        removeDismissMonitors()
+    }
+
+    private func installDismissMonitors() {
+        removeDismissMonitors()
+
+        localDismissMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .keyDown]
+        ) { [weak self] event in
+            guard let self else {
+                return event
+            }
+
+            if event.type == .keyDown && event.keyCode == 53 {
+                self.closePanel()
+                return nil
+            }
+
+            if event.type == .leftMouseDown || event.type == .rightMouseDown {
+                if self.eventIsInsidePanelOrStatusItem(event) {
+                    return event
+                }
+
+                self.closePanel()
+            }
+
+            return event
+        }
+
+        globalDismissMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.closePanel()
+            }
+        }
+    }
+
+    private func removeDismissMonitors() {
+        if let localDismissMonitor {
+            NSEvent.removeMonitor(localDismissMonitor)
+            self.localDismissMonitor = nil
+        }
+
+        if let globalDismissMonitor {
+            NSEvent.removeMonitor(globalDismissMonitor)
+            self.globalDismissMonitor = nil
+        }
+    }
+
+    private func eventIsInsidePanelOrStatusItem(_ event: NSEvent) -> Bool {
+        guard let eventWindow = event.window else {
+            return false
+        }
+
+        if eventWindow == popover.contentViewController?.view.window {
+            return true
+        }
+
+        if eventWindow == statusItem.button?.window {
+            return true
+        }
+
+        return false
     }
 
     private func readTemperature() {
