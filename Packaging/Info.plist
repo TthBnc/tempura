@@ -8,6 +8,8 @@
     <string>Tempura</string>
     <key>CFBundleIdentifier</key>
     <string>com.tebe.tempura</string>
+    <key>CFBundleIconFile</key>
+    <string>Tempura</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="base" x1="176" y1="92" x2="848" y2="932" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#23322f"/>
+      <stop offset="0.52" stop-color="#101716"/>
+      <stop offset="1" stop-color="#080a0b"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="220" y1="116" x2="804" y2="908" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#eff7ef" stop-opacity="0.32"/>
+      <stop offset="0.42" stop-color="#7b9189" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.35"/>
+    </linearGradient>
+    <linearGradient id="heat" x1="332" y1="286" x2="692" y2="772" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe08c"/>
+      <stop offset="0.42" stop-color="#f28d32"/>
+      <stop offset="1" stop-color="#e7352f"/>
+    </linearGradient>
+    <radialGradient id="bulb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(486 674) rotate(64) scale(174 154)">
+      <stop offset="0" stop-color="#fff1a7"/>
+      <stop offset="0.48" stop-color="#f28c2d"/>
+      <stop offset="1" stop-color="#c91e2d"/>
+    </radialGradient>
+    <linearGradient id="flake" x1="618" y1="248" x2="782" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff0a8"/>
+      <stop offset="0.62" stop-color="#e7a33b"/>
+      <stop offset="1" stop-color="#a75b20"/>
+    </linearGradient>
+    <clipPath id="round">
+      <rect x="64" y="64" width="896" height="896" rx="212"/>
+    </clipPath>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="212" fill="url(#base)"/>
+  <g clip-path="url(#round)">
+    <path d="M118 170 C258 72 502 90 662 126 C810 160 922 316 946 474 L946 64 L64 64 L64 268 C78 230 94 196 118 170 Z" fill="#ffffff" opacity="0.08"/>
+    <path d="M136 812 C268 914 544 946 760 846 C846 806 906 734 944 644 L944 960 L64 960 L64 760 C86 780 108 798 136 812 Z" fill="#000000" opacity="0.18"/>
+    <rect x="226" y="172" width="572" height="76" rx="38" fill="#dfeee6" opacity="0.12"/>
+    <circle cx="302" cy="210" r="13" fill="#dfeee6" opacity="0.32"/>
+    <circle cx="354" cy="210" r="13" fill="#dfeee6" opacity="0.22"/>
+    <circle cx="406" cy="210" r="13" fill="#dfeee6" opacity="0.15"/>
+
+    <path d="M348 468 H430 M348 546 H406 M348 624 H430" fill="none" stroke="#b9cec4" stroke-width="30" stroke-linecap="round" opacity="0.32"/>
+    <path d="M676 468 H594 M700 546 H618 M676 624 H594" fill="none" stroke="#b9cec4" stroke-width="30" stroke-linecap="round" opacity="0.22"/>
+
+    <path d="M512 318 V698" fill="none" stroke="#2a3835" stroke-width="108" stroke-linecap="round"/>
+    <path d="M374 348 H650" fill="none" stroke="#2a3835" stroke-width="108" stroke-linecap="round"/>
+    <path d="M512 318 V696" fill="none" stroke="url(#heat)" stroke-width="68" stroke-linecap="round"/>
+    <path d="M374 348 H650" fill="none" stroke="url(#heat)" stroke-width="68" stroke-linecap="round"/>
+
+    <circle cx="512" cy="718" r="136" fill="#1c2624"/>
+    <circle cx="512" cy="718" r="102" fill="url(#bulb)"/>
+    <circle cx="472" cy="674" r="28" fill="#fff7bd" opacity="0.85"/>
+    <path d="M512 318 V708" fill="none" stroke="#fff1a7" stroke-width="22" stroke-linecap="round" opacity="0.42"/>
+
+    <path d="M690 236 L746 298 L820 292 L774 354 L798 426 L722 398 L662 444 L668 366 L606 318 L682 304 Z" fill="url(#flake)"/>
+    <path d="M682 304 L746 298 L774 354 L722 398 L668 366 Z" fill="#fff6bd" opacity="0.18"/>
+
+    <rect x="64" y="64" width="896" height="896" rx="212" fill="none" stroke="url(#rim)" stroke-width="28"/>
+  </g>
+</svg>

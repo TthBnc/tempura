@@ -24,6 +24,8 @@ The bundle is written to:
 .build/app/Tempura.app
 ```
 
+The app icon is generated from `Assets/AppIcon.svg` into a macOS `.icns` file during the app build.
+
 Build a local drag-install DMG:
 
 ```sh
