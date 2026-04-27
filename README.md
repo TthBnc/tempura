@@ -24,6 +24,20 @@ The bundle is written to:
 .build/app/Tempura.app
 ```
 
+Build a local drag-install DMG:
+
+```sh
+./Scripts/build_dmg.sh
+```
+
+The DMG is written to:
+
+```text
+dist/Tempura.dmg
+```
+
+Open it, then drag `Tempura.app` onto the `Applications` shortcut.
+
 ## Development Run
 
 For quick iteration, the executable can run directly:
