@@ -79,10 +79,10 @@ final class ThermalChartView: NSView {
 
     private func drawBackground(in rect: NSRect) {
         let backgroundPath = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
-        NSColor(calibratedWhite: 0.08, alpha: 0.86).setFill()
+        NSColor(calibratedWhite: 0.08, alpha: 0.62).setFill()
         backgroundPath.fill()
 
-        NSColor.separatorColor.withAlphaComponent(0.42).setStroke()
+        NSColor.separatorColor.withAlphaComponent(0.26).setStroke()
         backgroundPath.lineWidth = 1
         backgroundPath.stroke()
     }
@@ -190,9 +190,9 @@ final class ThermalChartView: NSView {
         )
         let plate = NSBezierPath(roundedRect: labelRect, xRadius: 3.5, yRadius: 3.5)
 
-        NSColor(calibratedWhite: 0.12, alpha: 0.9).setFill()
+        NSColor(calibratedWhite: 0.12, alpha: 0.72).setFill()
         plate.fill()
-        NSColor.white.withAlphaComponent(0.1).setStroke()
+        NSColor.white.withAlphaComponent(0.08).setStroke()
         plate.lineWidth = 1
         plate.stroke()
 

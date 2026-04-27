@@ -229,13 +229,13 @@ private struct GlassPalette {
 
     init(isDark: Bool) {
         if isDark {
-            fill = NSColor(calibratedWhite: 1, alpha: 0.045)
-            stroke = NSColor(calibratedWhite: 1, alpha: 0.14)
-            topHighlight = NSColor(calibratedWhite: 1, alpha: 0.18)
+            fill = NSColor(calibratedWhite: 1, alpha: 0.02)
+            stroke = NSColor(calibratedWhite: 1, alpha: 0.08)
+            topHighlight = NSColor(calibratedWhite: 1, alpha: 0.12)
         } else {
-            fill = NSColor(calibratedWhite: 1, alpha: 0.30)
-            stroke = NSColor(calibratedWhite: 1, alpha: 0.68)
-            topHighlight = NSColor(calibratedWhite: 1, alpha: 0.86)
+            fill = NSColor(calibratedWhite: 1, alpha: 0.20)
+            stroke = NSColor(calibratedWhite: 1, alpha: 0.46)
+            topHighlight = NSColor(calibratedWhite: 1, alpha: 0.68)
         }
     }
 }
