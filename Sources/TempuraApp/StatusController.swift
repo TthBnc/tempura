@@ -96,6 +96,9 @@ final class StatusController: NSObject, NSPopoverDelegate {
         popover.contentSize = ThermalPanelViewController.preferredContentSize
         popover.contentViewController = panelViewController
         popover.delegate = self
+        panelViewController.contentSizeDidChange = { [weak self] size in
+            self?.popover.contentSize = size
+        }
     }
 
     private func togglePanel() {
@@ -115,6 +118,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
             samples: history.samples,
             currentReading: currentReading
         )
+        panelViewController.collapseSettings()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         button.highlight(true)
         installDismissMonitors()
