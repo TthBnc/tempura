@@ -20,10 +20,15 @@
       <stop offset="0.48" stop-color="#f28c2d"/>
       <stop offset="1" stop-color="#c91e2d"/>
     </radialGradient>
-    <linearGradient id="flake" x1="618" y1="248" x2="782" y2="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fff0a8"/>
-      <stop offset="0.62" stop-color="#e7a33b"/>
-      <stop offset="1" stop-color="#a75b20"/>
+    <linearGradient id="starGold" x1="600" y1="236" x2="828" y2="462" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff8c9"/>
+      <stop offset="0.34" stop-color="#f8c95b"/>
+      <stop offset="0.7" stop-color="#d88724"/>
+      <stop offset="1" stop-color="#7e4318"/>
+    </linearGradient>
+    <linearGradient id="starEdge" x1="612" y1="254" x2="816" y2="442" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff5bd"/>
+      <stop offset="1" stop-color="#6f3713"/>
     </linearGradient>
     <clipPath id="round">
       <rect x="64" y="64" width="896" height="896" rx="212"/>
@@ -43,17 +48,22 @@
     <path d="M676 468 H594 M700 546 H618 M676 624 H594" fill="none" stroke="#b9cec4" stroke-width="30" stroke-linecap="round" opacity="0.22"/>
 
     <path d="M512 318 V698" fill="none" stroke="#2a3835" stroke-width="108" stroke-linecap="round"/>
-    <path d="M374 348 H650" fill="none" stroke="#2a3835" stroke-width="108" stroke-linecap="round"/>
     <path d="M512 318 V696" fill="none" stroke="url(#heat)" stroke-width="68" stroke-linecap="round"/>
-    <path d="M374 348 H650" fill="none" stroke="url(#heat)" stroke-width="68" stroke-linecap="round"/>
 
     <circle cx="512" cy="718" r="136" fill="#1c2624"/>
     <circle cx="512" cy="718" r="102" fill="url(#bulb)"/>
     <circle cx="472" cy="674" r="28" fill="#fff7bd" opacity="0.85"/>
     <path d="M512 318 V708" fill="none" stroke="#fff1a7" stroke-width="22" stroke-linecap="round" opacity="0.42"/>
 
-    <path d="M690 236 L746 298 L820 292 L774 354 L798 426 L722 398 L662 444 L668 366 L606 318 L682 304 Z" fill="url(#flake)"/>
-    <path d="M682 304 L746 298 L774 354 L722 398 L668 366 Z" fill="#fff6bd" opacity="0.18"/>
+    <path d="M722 226 L756 314 L850 306 L782 374 L806 468 L722 420 L638 468 L662 374 L594 306 L688 314 Z" fill="#050606" opacity="0.22"/>
+    <path d="M714 218 L748 306 L842 298 L774 366 L798 460 L714 412 L630 460 L654 366 L586 298 L680 306 Z" fill="url(#starGold)"/>
+    <path d="M714 218 L748 306 L714 352 L680 306 Z" fill="#fff5b8" opacity="0.92"/>
+    <path d="M842 298 L774 366 L714 352 L748 306 Z" fill="#f2b23d" opacity="0.96"/>
+    <path d="M798 460 L714 412 L714 352 L774 366 Z" fill="#b9641f" opacity="0.92"/>
+    <path d="M630 460 L654 366 L714 352 L714 412 Z" fill="#dc8024" opacity="0.88"/>
+    <path d="M586 298 L680 306 L714 352 L654 366 Z" fill="#ffd66f" opacity="0.9"/>
+    <path d="M714 218 L748 306 L842 298 L774 366 L798 460 L714 412 L630 460 L654 366 L586 298 L680 306 Z" fill="none" stroke="url(#starEdge)" stroke-width="8" stroke-linejoin="round" opacity="0.46"/>
+    <path d="M680 306 L714 352 L774 366" fill="none" stroke="#fff2a8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.34"/>
 
     <rect x="64" y="64" width="896" height="896" rx="212" fill="none" stroke="url(#rim)" stroke-width="28"/>
   </g>
