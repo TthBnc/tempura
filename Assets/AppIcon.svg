@@ -5,11 +5,6 @@
       <stop offset="0.52" stop-color="#101716"/>
       <stop offset="1" stop-color="#080a0b"/>
     </linearGradient>
-    <linearGradient id="rim" x1="220" y1="116" x2="804" y2="908" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#eff7ef" stop-opacity="0.32"/>
-      <stop offset="0.42" stop-color="#7b9189" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#000000" stop-opacity="0.35"/>
-    </linearGradient>
     <linearGradient id="heat" x1="332" y1="286" x2="692" y2="772" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ffe08c"/>
       <stop offset="0.42" stop-color="#f28d32"/>
@@ -31,14 +26,14 @@
       <stop offset="1" stop-color="#6f3713"/>
     </linearGradient>
     <clipPath id="round">
-      <rect x="64" y="64" width="896" height="896" rx="212"/>
+      <rect x="0" y="0" width="1024" height="1024" rx="236"/>
     </clipPath>
   </defs>
 
-  <rect x="64" y="64" width="896" height="896" rx="212" fill="url(#base)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="236" fill="url(#base)"/>
   <g clip-path="url(#round)">
-    <path d="M118 170 C258 72 502 90 662 126 C810 160 922 316 946 474 L946 64 L64 64 L64 268 C78 230 94 196 118 170 Z" fill="#ffffff" opacity="0.08"/>
-    <path d="M136 812 C268 914 544 946 760 846 C846 806 906 734 944 644 L944 960 L64 960 L64 760 C86 780 108 798 136 812 Z" fill="#000000" opacity="0.18"/>
+    <path d="M54 106 C212 14 492 28 690 80 C852 122 982 294 1012 466 L1012 0 L0 0 L0 280 C12 210 28 144 54 106 Z" fill="#ffffff" opacity="0.06"/>
+    <path d="M74 842 C238 974 568 1008 800 890 C900 838 972 742 1018 620 L1018 1024 L0 1024 L0 750 C20 786 44 818 74 842 Z" fill="#000000" opacity="0.2"/>
     <rect x="226" y="172" width="572" height="76" rx="38" fill="#dfeee6" opacity="0.12"/>
     <circle cx="302" cy="210" r="13" fill="#dfeee6" opacity="0.32"/>
     <circle cx="354" cy="210" r="13" fill="#dfeee6" opacity="0.22"/>
@@ -64,7 +59,5 @@
     <path d="M586 298 L680 306 L714 352 L654 366 Z" fill="#ffd66f" opacity="0.9"/>
     <path d="M714 218 L748 306 L842 298 L774 366 L798 460 L714 412 L630 460 L654 366 L586 298 L680 306 Z" fill="none" stroke="url(#starEdge)" stroke-width="8" stroke-linejoin="round" opacity="0.46"/>
     <path d="M680 306 L714 352 L774 366" fill="none" stroke="#fff2a8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.34"/>
-
-    <rect x="64" y="64" width="896" height="896" rx="212" fill="none" stroke="url(#rim)" stroke-width="28"/>
   </g>
 </svg>
