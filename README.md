@@ -22,9 +22,11 @@ Tempura is currently ad-hoc signed, not notarized with Apple Developer ID, so ma
 - Shows a live Celsius temperature in the macOS menu bar.
 - Opens a compact panel with the last 60 seconds of local thermal history.
 - Colors readings by temperature range.
+- Can open automatically when you log in.
+- Shows the app version and opens the latest release page for manual update checks.
 - Provides a `Quit Tempura` button in the panel.
 - Prevents duplicate app instances.
-- Stays local-only: no network telemetry, no fan control, and no SMC writes.
+- Stays local-only while monitoring: no background network calls, telemetry, fan control, or SMC writes.
 
 ## Build From Source
 

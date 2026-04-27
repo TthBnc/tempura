@@ -93,7 +93,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private func configurePopover() {
         popover.behavior = .transient
         popover.animates = true
-        popover.contentSize = NSSize(width: 300, height: 232)
+        popover.contentSize = ThermalPanelViewController.preferredContentSize
         popover.contentViewController = panelViewController
         popover.delegate = self
     }
