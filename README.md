@@ -2,11 +2,13 @@
 
 Tempura is a native macOS menu bar utility that shows one representative hardware temperature in Celsius.
 
+![Tempura menu bar panel](Assets/readme-screenshot.png)
+
 ## Download
 
 Download the latest release:
 
-[Tempura 0.1.0](https://github.com/TthBnc/tempura/releases/tag/v0.1.0)
+[Tempura 0.2.0](https://github.com/TthBnc/tempura/releases/tag/v0.2.0)
 
 Install from the DMG:
 
