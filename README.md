@@ -2,7 +2,7 @@
 
 Tempura is a native macOS menu bar utility that shows one representative hardware temperature in Celsius.
 
-The MVP follows the PRD in `docs/thermal-menubar-mvp-prd.md`: no window, no popover, no telemetry, no fan control, and no SMC writes.
+The first MVP followed the PRD in `docs/thermal-menubar-mvp-prd.md`. The current build remains local-only with no network telemetry, no fan control, and no SMC writes.
 
 ## Build
 
@@ -58,5 +58,7 @@ The packaged app is preferred for daily use because `Packaging/Info.plist` sets 
 - Polls every 5 seconds.
 - Shows `--°C` when no valid sensor is available.
 - Colors the menu bar text orange at `>= 70°C` and red at `>= 85°C`.
-- Provides only a right-click or Control-click `Quit` menu.
+- Opens a compact native panel on regular click.
+- Shows a rolling 60-second local temperature chart with dynamic y-axis scaling.
+- Provides `Quit Tempura` at the bottom of the panel and a right-click or Control-click `Quit` menu.
 - Ignores duplicate launches while Tempura is already running.

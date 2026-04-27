@@ -2,15 +2,19 @@ import AppKit
 import TempuraCore
 
 @MainActor
-final class StatusController: NSObject {
+final class StatusController: NSObject, NSPopoverDelegate {
     private let statusItem: NSStatusItem
     private let provider: any TemperatureReadingProvider
     private let readQueue = DispatchQueue(label: "com.tebe.tempura.sensor-read", qos: .utility)
     private let quitMenu = NSMenu()
+    private let panelViewController = ThermalPanelViewController()
+    private let popover = NSPopover()
 
     private var timer: Timer?
     private var readInFlight = false
     private var lastDisplayState: DisplayState?
+    private var currentReading: TemperatureReading?
+    private var history = TemperatureHistory(retention: 60)
 
     init(provider: any TemperatureReadingProvider) {
         self.provider = provider
@@ -20,6 +24,7 @@ final class StatusController: NSObject {
 
         configureStatusItem()
         configureQuitMenu()
+        configurePopover()
         updateDisplay(DisplayState.unavailable)
         readTemperature()
 
@@ -62,6 +67,8 @@ final class StatusController: NSObject {
 
         if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
             showQuitMenu()
+        } else {
+            togglePanel()
         }
     }
 
@@ -81,6 +88,41 @@ final class StatusController: NSObject {
         )
     }
 
+    private func configurePopover() {
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentSize = NSSize(width: 300, height: 232)
+        popover.contentViewController = panelViewController
+        popover.delegate = self
+    }
+
+    private func togglePanel() {
+        if popover.isShown {
+            popover.performClose(nil)
+        } else {
+            showPanel()
+        }
+    }
+
+    private func showPanel() {
+        guard let button = statusItem.button else {
+            return
+        }
+
+        panelViewController.update(
+            samples: history.samples,
+            currentReading: currentReading
+        )
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        button.highlight(true)
+    }
+
+    nonisolated func popoverDidClose(_ notification: Notification) {
+        Task { @MainActor [weak self] in
+            self?.statusItem.button?.highlight(false)
+        }
+    }
+
     private func readTemperature() {
         guard !readInFlight else {
             return
@@ -94,7 +136,13 @@ final class StatusController: NSObject {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.readInFlight = false
+                self.currentReading = reading
+                self.history.record(reading)
                 self.updateDisplay(DisplayState(reading: reading))
+                self.panelViewController.update(
+                    samples: self.history.samples,
+                    currentReading: reading
+                )
             }
         }
     }
@@ -117,62 +165,9 @@ final class StatusController: NSObject {
             string: state.title,
             attributes: [
                 .font: font,
-                .foregroundColor: state.bucket.color,
+                .foregroundColor: state.bucket.menuColor,
                 .paragraphStyle: paragraph
             ]
         )
-    }
-}
-
-private struct DisplayState: Equatable {
-    let title: String
-    let bucket: TemperatureBucket
-
-    static let unavailable = DisplayState(title: "--°C", bucket: .unavailable)
-
-    init(title: String, bucket: TemperatureBucket) {
-        self.title = title
-        self.bucket = bucket
-    }
-
-    init(reading: TemperatureReading?) {
-        guard let reading else {
-            self = .unavailable
-            return
-        }
-
-        let roundedCelsius = Int(reading.celsius.rounded())
-        self.title = "\(roundedCelsius)°C"
-        self.bucket = TemperatureBucket(celsius: roundedCelsius)
-    }
-}
-
-private enum TemperatureBucket: Equatable {
-    case normal
-    case warm
-    case hot
-    case unavailable
-
-    init(celsius: Int) {
-        if celsius >= 85 {
-            self = .hot
-        } else if celsius >= 70 {
-            self = .warm
-        } else {
-            self = .normal
-        }
-    }
-
-    var color: NSColor {
-        switch self {
-        case .normal:
-            return .labelColor
-        case .warm:
-            return .systemOrange
-        case .hot:
-            return .systemRed
-        case .unavailable:
-            return .disabledControlTextColor
-        }
     }
 }
