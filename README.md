@@ -59,3 +59,4 @@ The packaged app is preferred for daily use because `Packaging/Info.plist` sets 
 - Shows `--°C` when no valid sensor is available.
 - Colors the menu bar text orange at `>= 70°C` and red at `>= 85°C`.
 - Provides only a right-click or Control-click `Quit` menu.
+- Ignores duplicate launches while Tempura is already running.
