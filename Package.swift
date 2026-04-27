@@ -35,6 +35,10 @@ let package = Package(
         .executableTarget(
             name: "TempuraProbe",
             dependencies: ["TempuraCore"]
+        ),
+        .testTarget(
+            name: "TempuraCoreTests",
+            dependencies: ["TempuraCore"]
         )
     ]
 )

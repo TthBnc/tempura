@@ -1,7 +1,7 @@
 import Foundation
 
 public final class SMCTemperatureReadingProvider: TemperatureReadingProvider, @unchecked Sendable {
-    private let smcClient: SMCClient
+    private let smcClient: any SMCReadingClient
     private let machine: MachineInfo
     private let cacheLock = NSLock()
     private var cachedAllKeys: [String]?
@@ -10,7 +10,7 @@ public final class SMCTemperatureReadingProvider: TemperatureReadingProvider, @u
         try self.init(machine: machine, smcClient: SMCClient())
     }
 
-    public init(machine: MachineInfo, smcClient: SMCClient) {
+    public init(machine: MachineInfo, smcClient: any SMCReadingClient) {
         self.machine = machine
         self.smcClient = smcClient
     }

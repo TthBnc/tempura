@@ -21,6 +21,18 @@ public struct MachineInfo: Codable, Sendable {
     public let architecture: String
     public let chipGeneration: ChipGeneration
 
+    public init(
+        modelIdentifier: String?,
+        cpuBrand: String?,
+        architecture: String,
+        chipGeneration: ChipGeneration
+    ) {
+        self.modelIdentifier = modelIdentifier
+        self.cpuBrand = cpuBrand
+        self.architecture = architecture
+        self.chipGeneration = chipGeneration
+    }
+
     public static var current: MachineInfo {
         let cpuBrand = sysctlString("machdep.cpu.brand_string")
         let architecture = machineArchitecture()

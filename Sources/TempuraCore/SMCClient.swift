@@ -111,7 +111,12 @@ public enum SMCClientError: LocalizedError {
     }
 }
 
-public final class SMCClient: @unchecked Sendable {
+public protocol SMCReadingClient: Sendable {
+    func decodedDouble(forKey key: String) -> Double?
+    func allKeys() -> [String]
+}
+
+public final class SMCClient: SMCReadingClient, @unchecked Sendable {
     private let connection: io_connect_t
 
     public init() throws {
