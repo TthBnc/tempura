@@ -8,7 +8,7 @@ Tempura is a native macOS menu bar utility that shows one representative hardwar
 
 Download the latest release:
 
-[Tempura 0.5.0](https://github.com/TthBnc/tempura/releases/tag/v0.5.0)
+[Tempura 0.5.1](https://github.com/TthBnc/tempura/releases/tag/v0.5.1)
 
 Install from the DMG:
 
