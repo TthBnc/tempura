@@ -10,12 +10,14 @@ final class ThermalChartView: NSView {
             }
 
             needsDisplay = true
+            updateAccessibilityValue()
         }
     }
 
     var samples: [TemperatureSample] = [] {
         didSet {
             animateSamplesChange()
+            updateAccessibilityValue()
         }
     }
 
@@ -85,6 +87,27 @@ final class ThermalChartView: NSView {
         wantsLayer = true
         layer?.cornerRadius = TempuraDesign.Radius.chart
         layer?.masksToBounds = true
+        setAccessibilityElement(true)
+        setAccessibilityRole(.image)
+        setAccessibilityLabel("Thermal history chart")
+        setAccessibilityValue("No thermal readings yet")
+    }
+
+    private func updateAccessibilityValue() {
+        guard let latest = samples.last else {
+            setAccessibilityValue("No thermal readings yet")
+            return
+        }
+
+        let latestText = temperatureUnit.formatted(celsius: latest.celsius)
+        guard let range = TemperatureHistory(samples: samples).dynamicRange() else {
+            setAccessibilityValue("Latest \(latestText)")
+            return
+        }
+
+        let lowText = temperatureUnit.formatted(celsius: range.lowerBound)
+        let highText = temperatureUnit.formatted(celsius: range.upperBound)
+        setAccessibilityValue("Latest \(latestText), range \(lowText) to \(highText) over the last 60 seconds")
     }
 
     private func drawBackground(in rect: NSRect) {

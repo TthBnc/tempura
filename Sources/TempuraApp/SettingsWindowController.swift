@@ -7,8 +7,11 @@ final class SettingsWindowController: NSWindowController {
         let window = NSWindow(contentViewController: viewController)
         window.title = "General"
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.contentMinSize = NSSize(width: 488, height: 560)
-        window.setContentSize(NSSize(width: 488, height: 560))
+        window.contentMinSize = NSSize(
+            width: TempuraDesign.Layout.settingsWidth,
+            height: TempuraDesign.Layout.settingsHeight
+        )
+        window.setContentSize(window.contentMinSize)
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
         window.center()
@@ -60,7 +63,14 @@ private final class SettingsViewController: NSViewController {
     private let quitButton = NSButton(title: "Quit Tempura", target: NSApp, action: #selector(NSApplication.terminate(_:)))
 
     override func loadView() {
-        let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 488, height: 560))
+        let visualEffectView = NSVisualEffectView(
+            frame: NSRect(
+                x: 0,
+                y: 0,
+                width: TempuraDesign.Layout.settingsWidth,
+                height: TempuraDesign.Layout.settingsHeight
+            )
+        )
         visualEffectView.material = .windowBackground
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.state = .active
@@ -114,9 +124,9 @@ private final class SettingsViewController: NSViewController {
         let stack = NSStackView(views: [
             systemSection,
             firstSeparator,
-            updatesSection,
-            secondSeparator,
             displaySection,
+            secondSeparator,
+            updatesSection,
             thirdSeparator,
             aboutSection,
             spacer,
@@ -124,8 +134,13 @@ private final class SettingsViewController: NSViewController {
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 18
-        stack.edgeInsets = NSEdgeInsets(top: 34, left: 36, bottom: 28, right: 36)
+        stack.spacing = TempuraDesign.Layout.settingsSectionSpacing
+        stack.edgeInsets = NSEdgeInsets(
+            top: TempuraDesign.Layout.settingsTopInset,
+            left: TempuraDesign.Layout.settingsHorizontalInset,
+            bottom: TempuraDesign.Layout.settingsBottomInset,
+            right: TempuraDesign.Layout.settingsHorizontalInset
+        )
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(stack)
@@ -136,14 +151,14 @@ private final class SettingsViewController: NSViewController {
             stack.topAnchor.constraint(equalTo: view.topAnchor),
             stack.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            systemSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
-            firstSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
-            updatesSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
-            secondSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
-            displaySection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
-            thirdSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
-            aboutSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
-            quitRow.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
+            systemSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
+            firstSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
+            displaySection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
+            secondSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
+            updatesSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
+            thirdSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
+            aboutSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
+            quitRow.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.settingsHorizontalInset * 2),
             quitButton.widthAnchor.constraint(equalToConstant: 120)
         ])
 
@@ -156,19 +171,25 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func configureControls() {
-        launchAtLoginCheckbox.font = .systemFont(ofSize: 13, weight: .semibold)
+        launchAtLoginCheckbox.font = TempuraDesign.Font.settingsTitle
         launchAtLoginCheckbox.target = self
         launchAtLoginCheckbox.action = #selector(toggleLaunchAtLogin(_:))
+        launchAtLoginCheckbox.setAccessibilityLabel("Start at Login")
+        launchAtLoginCheckbox.setAccessibilityHelp("Automatically opens Tempura when you log in.")
 
-        launchAtLoginStatusLabel.font = .systemFont(ofSize: 11, weight: .regular)
+        launchAtLoginStatusLabel.font = TempuraDesign.Font.settingsHelp
         launchAtLoginStatusLabel.textColor = .secondaryLabelColor
-        launchAtLoginStatusLabel.lineBreakMode = .byTruncatingTail
+        launchAtLoginStatusLabel.lineBreakMode = .byWordWrapping
+        launchAtLoginStatusLabel.maximumNumberOfLines = 2
 
         [menuBarTemperatureCheckbox, menuBarMemoryCheckbox, menuBarSwapCheckbox].forEach { checkbox in
-            checkbox.font = .systemFont(ofSize: 13, weight: .regular)
+            checkbox.font = TempuraDesign.Font.button
             checkbox.target = self
             checkbox.action = #selector(changeMenuBarMetrics(_:))
         }
+        menuBarTemperatureCheckbox.setAccessibilityHelp("Shows or hides temperature in the menu bar.")
+        menuBarMemoryCheckbox.setAccessibilityHelp("Shows or hides memory usage in the menu bar.")
+        menuBarSwapCheckbox.setAccessibilityHelp("Shows or hides swap overflow in the menu bar.")
 
         menuBarLabelStyleControl.target = self
         menuBarLabelStyleControl.action = #selector(changeMenuBarLabelStyle(_:))
@@ -176,31 +197,38 @@ private final class SettingsViewController: NSViewController {
         menuBarLabelStyleControl.setWidth(72, forSegment: 0)
         menuBarLabelStyleControl.setWidth(72, forSegment: 1)
         menuBarLabelStyleControl.setWidth(88, forSegment: 2)
+        menuBarLabelStyleControl.setAccessibilityLabel("Memory and Swap Labels")
+        menuBarLabelStyleControl.setAccessibilityHelp("Controls how memory and swap values are labeled in the menu bar.")
 
         temperatureUnitControl.target = self
         temperatureUnitControl.action = #selector(changeTemperatureUnit(_:))
         temperatureUnitControl.segmentStyle = .rounded
         temperatureUnitControl.setWidth(52, forSegment: 0)
         temperatureUnitControl.setWidth(52, forSegment: 1)
+        temperatureUnitControl.setAccessibilityLabel("Temperature Unit")
+        temperatureUnitControl.setAccessibilityHelp("Sets whether temperatures are shown in Celsius or Fahrenheit.")
 
-        versionLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        versionLabel.font = TempuraDesign.Font.settingsVersion
         versionLabel.textColor = .secondaryLabelColor
 
         updateButton.bezelStyle = .rounded
         updateButton.controlSize = .regular
-        updateButton.font = .systemFont(ofSize: 13, weight: .medium)
+        updateButton.font = TempuraDesign.Font.buttonStrong
         updateButton.toolTip = "Open the Tempura releases page"
         updateButton.target = self
         updateButton.action = #selector(checkForUpdates(_:))
+        updateButton.setAccessibilityLabel("Check for Updates")
+        updateButton.setAccessibilityHelp("Opens the latest Tempura release page in your browser.")
 
         quitButton.bezelStyle = .rounded
         quitButton.controlSize = .regular
-        quitButton.font = .systemFont(ofSize: 13, weight: .medium)
+        quitButton.font = TempuraDesign.Font.buttonStrong
+        quitButton.setAccessibilityLabel("Quit Tempura")
     }
 
     private func makeSection(title: String, views: [NSView]) -> NSStackView {
         let titleLabel = NSTextField(labelWithString: title)
-        titleLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        titleLabel.font = TempuraDesign.Font.settingsSection
         titleLabel.textColor = .secondaryLabelColor
 
         let stack = NSStackView(views: [titleLabel] + views)
@@ -229,16 +257,8 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func makeUpdateRow() -> NSStackView {
-        let titleLabel = NSTextField(labelWithString: "Manual Updates")
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .labelColor
-
-        let helpLabel = NSTextField(
-            labelWithString: "Opens the latest GitHub release page only when you click the button."
-        )
-        helpLabel.font = .systemFont(ofSize: 11, weight: .regular)
-        helpLabel.textColor = .secondaryLabelColor
-        helpLabel.lineBreakMode = .byTruncatingTail
+        let titleLabel = makeTitleLabel("Manual Updates")
+        let helpLabel = makeHelpLabel("Opens the latest GitHub release page only when you click the button.")
 
         let textStack = NSStackView(views: [titleLabel, helpLabel])
         textStack.orientation = .vertical
@@ -248,7 +268,7 @@ private final class SettingsViewController: NSViewController {
         let row = NSStackView(views: [textStack, NSView(), updateButton])
         row.orientation = .horizontal
         row.alignment = .centerY
-        row.spacing = 12
+        row.spacing = TempuraDesign.Layout.settingsRowSpacing
 
         NSLayoutConstraint.activate([
             textStack.widthAnchor.constraint(greaterThanOrEqualToConstant: 250),
@@ -259,14 +279,8 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func makeTemperatureUnitRow() -> NSStackView {
-        let titleLabel = NSTextField(labelWithString: "Temperature Unit")
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .labelColor
-
-        let helpLabel = NSTextField(labelWithString: "Controls the menu bar, panel value, and chart labels.")
-        helpLabel.font = .systemFont(ofSize: 11, weight: .regular)
-        helpLabel.textColor = .secondaryLabelColor
-        helpLabel.lineBreakMode = .byTruncatingTail
+        let titleLabel = makeTitleLabel("Temperature Unit")
+        let helpLabel = makeHelpLabel("Controls the menu bar, panel value, and chart labels.")
 
         let textStack = NSStackView(views: [titleLabel, helpLabel])
         textStack.orientation = .vertical
@@ -276,7 +290,7 @@ private final class SettingsViewController: NSViewController {
         let row = NSStackView(views: [textStack, NSView(), temperatureUnitControl])
         row.orientation = .horizontal
         row.alignment = .centerY
-        row.spacing = 12
+        row.spacing = TempuraDesign.Layout.settingsRowSpacing
 
         NSLayoutConstraint.activate([
             textStack.widthAnchor.constraint(greaterThanOrEqualToConstant: 250),
@@ -287,14 +301,8 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func makeMenuBarMetricsStack() -> NSStackView {
-        let titleLabel = NSTextField(labelWithString: "Menu Bar Metrics")
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .labelColor
-
-        let helpLabel = NSTextField(labelWithString: "Choose any combination to show beside the Tempura menu.")
-        helpLabel.font = .systemFont(ofSize: 11, weight: .regular)
-        helpLabel.textColor = .secondaryLabelColor
-        helpLabel.lineBreakMode = .byTruncatingTail
+        let titleLabel = makeTitleLabel("Menu Bar Metrics")
+        let helpLabel = makeHelpLabel("Choose any combination to show beside the Tempura menu.")
 
         let checkboxStack = NSStackView(views: [
             menuBarTemperatureCheckbox,
@@ -319,14 +327,8 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func makeMenuBarLabelStyleRow() -> NSStackView {
-        let titleLabel = NSTextField(labelWithString: "Memory and Swap Labels")
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        titleLabel.textColor = .labelColor
-
-        let helpLabel = NSTextField(labelWithString: "Full shows RAM/SWAP, slim shows M/S, compact shows percentages only.")
-        helpLabel.font = .systemFont(ofSize: 11, weight: .regular)
-        helpLabel.textColor = .secondaryLabelColor
-        helpLabel.lineBreakMode = .byTruncatingTail
+        let titleLabel = makeTitleLabel("Memory and Swap Labels")
+        let helpLabel = makeHelpLabel("Full shows RAM/SWAP, Slim shows M/S, Compact shows percentages only.")
 
         let textStack = NSStackView(views: [titleLabel, helpLabel])
         textStack.orientation = .vertical
@@ -336,7 +338,7 @@ private final class SettingsViewController: NSViewController {
         let row = NSStackView(views: [textStack, NSView(), menuBarLabelStyleControl])
         row.orientation = .horizontal
         row.alignment = .centerY
-        row.spacing = 12
+        row.spacing = TempuraDesign.Layout.settingsRowSpacing
 
         NSLayoutConstraint.activate([
             textStack.widthAnchor.constraint(greaterThanOrEqualToConstant: 190),
@@ -347,14 +349,9 @@ private final class SettingsViewController: NSViewController {
     }
 
     private func makeAboutStack() -> NSStackView {
-        let nameLabel = NSTextField(labelWithString: "Tempura")
-        nameLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        nameLabel.textColor = .labelColor
+        let nameLabel = makeTitleLabel("Tempura")
 
-        let descriptionLabel = NSTextField(labelWithString: "Local macOS temperature monitor. MIT License.")
-        descriptionLabel.font = .systemFont(ofSize: 11, weight: .regular)
-        descriptionLabel.textColor = .secondaryLabelColor
-        descriptionLabel.lineBreakMode = .byTruncatingTail
+        let descriptionLabel = makeHelpLabel("Local macOS temperature monitor. MIT License.")
 
         let stack = NSStackView(views: [nameLabel, versionLabel, descriptionLabel])
         stack.orientation = .vertical
@@ -367,6 +364,22 @@ private final class SettingsViewController: NSViewController {
         ])
 
         return stack
+    }
+
+    private func makeTitleLabel(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title)
+        label.font = TempuraDesign.Font.settingsTitle
+        label.textColor = .labelColor
+        return label
+    }
+
+    private func makeHelpLabel(_ title: String) -> NSTextField {
+        let label = NSTextField(labelWithString: title)
+        label.font = TempuraDesign.Font.settingsHelp
+        label.textColor = .secondaryLabelColor
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 2
+        return label
     }
 
     private func makeSeparator() -> NSBox {
@@ -386,6 +399,9 @@ private final class SettingsViewController: NSViewController {
         menuBarLabelStyleControl.selectedSegment = MenuBarMemoryLabelStyle.allCases
             .firstIndex(of: menuBarSettings.memoryLabelStyle) ?? 1
         versionLabel.stringValue = applicationVersionText
+        temperatureUnitControl.setAccessibilityValue(TemperatureUnit.current.displayName)
+        menuBarLabelStyleControl.setAccessibilityValue(menuBarSettings.memoryLabelStyle.displayName)
+        versionLabel.setAccessibilityLabel(applicationVersionText)
     }
 
     @objc private func toggleLaunchAtLogin(_ sender: NSButton) {

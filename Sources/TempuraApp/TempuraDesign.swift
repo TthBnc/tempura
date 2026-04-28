@@ -40,6 +40,13 @@ enum TempuraDesign {
         static let cardVerticalInset: CGFloat = 8
         static let meterHeight: CGFloat = 5
         static let actionSpacing: CGFloat = 8
+        static let settingsWidth: CGFloat = 504
+        static let settingsHeight: CGFloat = 584
+        static let settingsHorizontalInset: CGFloat = 36
+        static let settingsTopInset: CGFloat = 34
+        static let settingsBottomInset: CGFloat = 28
+        static let settingsSectionSpacing: CGFloat = 18
+        static let settingsRowSpacing: CGFloat = 12
     }
 
     enum Color {
