@@ -169,6 +169,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
             return
         }
 
+        NSApp.activate(ignoringOtherApps: true)
+
         panelViewController.update(
             samples: history.samples,
             currentReading: currentReading,
@@ -176,8 +178,15 @@ final class StatusController: NSObject, NSPopoverDelegate {
             memoryStatus: currentMemoryStatus
         )
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        activatePopoverWindow()
         button.highlight(true)
         installDismissMonitors()
+    }
+
+    nonisolated func popoverDidShow(_ notification: Notification) {
+        Task { @MainActor [weak self] in
+            self?.activatePopoverWindow()
+        }
     }
 
     nonisolated func popoverDidClose(_ notification: Notification) {
@@ -196,6 +205,18 @@ final class StatusController: NSObject, NSPopoverDelegate {
         popover.performClose(nil)
         statusItem.button?.highlight(false)
         removeDismissMonitors()
+    }
+
+    private func activatePopoverWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+
+        guard let window = popover.contentViewController?.view.window else {
+            return
+        }
+
+        window.makeKey()
+        window.invalidateShadow()
+        window.contentView?.needsDisplay = true
     }
 
     private func installDismissMonitors() {
