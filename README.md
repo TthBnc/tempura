@@ -1,6 +1,6 @@
 # Tempura
 
-Tempura is a native macOS menu bar utility that shows one representative hardware temperature in Celsius.
+Tempura is a native macOS menu bar utility that shows one representative hardware temperature in Celsius or Fahrenheit.
 
 ![Tempura menu bar panel](Assets/readme-screenshot.png)
 
@@ -43,6 +43,7 @@ Tempura requires macOS 13 Ventura or newer.
 - Shows a live Celsius temperature in the macOS menu bar.
 - Opens a compact panel with the last 60 seconds of local thermal history.
 - Colors readings by temperature range.
+- Supports Celsius and Fahrenheit display units.
 - Can open automatically when you log in.
 - Shows version details and opens the latest release page from a separate settings window when requested.
 - Provides a `Quit Tempura` button in the panel.

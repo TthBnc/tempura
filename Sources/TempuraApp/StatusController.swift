@@ -18,6 +18,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var history = TemperatureHistory(retention: 60)
     private var localDismissMonitor: Any?
     private var globalDismissMonitor: Any?
+    private var temperatureUnit = TemperatureUnit.current
 
     init(provider: any TemperatureReadingProvider) {
         self.provider = provider
@@ -28,6 +29,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         configureStatusItem()
         configureQuitMenu()
         configurePopover()
+        configureTemperatureUnitObserver()
         updateDisplay(DisplayState.unavailable)
         readTemperature()
 
@@ -105,6 +107,31 @@ final class StatusController: NSObject, NSPopoverDelegate {
             self.closePanel()
             self.settingsWindowController.showSettingsWindow()
         }
+        panelViewController.setTemperatureUnit(temperatureUnit)
+    }
+
+    private func configureTemperatureUnitObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(temperatureUnitDidChange(_:)),
+            name: .temperatureUnitDidChange,
+            object: nil
+        )
+    }
+
+    @objc private func temperatureUnitDidChange(_ notification: Notification) {
+        guard let unit = notification.object as? TemperatureUnit else {
+            return
+        }
+
+        temperatureUnit = unit
+        panelViewController.setTemperatureUnit(unit)
+        lastDisplayState = nil
+        updateDisplay(DisplayState(reading: currentReading, unit: unit))
+        panelViewController.update(
+            samples: history.samples,
+            currentReading: currentReading
+        )
     }
 
     private func togglePanel() {
@@ -225,7 +252,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
                 self.readInFlight = false
                 self.currentReading = reading
                 self.history.record(reading)
-                self.updateDisplay(DisplayState(reading: reading))
+                self.updateDisplay(DisplayState(reading: reading, unit: self.temperatureUnit))
                 self.panelViewController.update(
                     samples: self.history.samples,
                     currentReading: reading

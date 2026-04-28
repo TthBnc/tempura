@@ -3,6 +3,16 @@ import QuartzCore
 import TempuraCore
 
 final class ThermalChartView: NSView {
+    var temperatureUnit = TemperatureUnit.current {
+        didSet {
+            guard temperatureUnit != oldValue else {
+                return
+            }
+
+            needsDisplay = true
+        }
+    }
+
     var samples: [TemperatureSample] = [] {
         didSet {
             animateSamplesChange()
@@ -166,9 +176,12 @@ final class ThermalChartView: NSView {
             .foregroundColor: NSColor(calibratedWhite: 0.86, alpha: 1)
         ]
 
-        let high = "\(Int(range.upperBound.rounded()))°"
-        let midpoint = "\(Int(((range.lowerBound + range.upperBound) / 2).rounded()))°"
-        let low = "\(Int(range.lowerBound.rounded()))°"
+        let high = temperatureUnit.formatted(celsius: range.upperBound, includeUnit: false)
+        let midpoint = temperatureUnit.formatted(
+            celsius: (range.lowerBound + range.upperBound) / 2,
+            includeUnit: false
+        )
+        let low = temperatureUnit.formatted(celsius: range.lowerBound, includeUnit: false)
 
         drawAxisLabel(high, atY: rect.minY + 1, in: rect, attributes: attributes)
         drawAxisLabel(midpoint, atY: rect.midY - 7, in: rect, attributes: attributes)

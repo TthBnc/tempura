@@ -12,6 +12,7 @@ final class ThermalPanelViewController: NSViewController {
     private let chartView = ThermalChartView()
     private let settingsButton = NSButton()
     private let quitButton = NSButton()
+    private var temperatureUnit = TemperatureUnit.current
 
     override func loadView() {
         let backdropView = PanelGlassBackdropView(
@@ -74,8 +75,13 @@ final class ThermalPanelViewController: NSViewController {
         ])
     }
 
+    func setTemperatureUnit(_ unit: TemperatureUnit) {
+        temperatureUnit = unit
+        chartView.temperatureUnit = unit
+    }
+
     func update(samples: [TemperatureSample], currentReading: TemperatureReading?) {
-        let displayState = DisplayState(reading: currentReading)
+        let displayState = DisplayState(reading: currentReading, unit: temperatureUnit)
         currentValueLabel.stringValue = displayState.title
         currentValueLabel.textColor = displayState.bucket.chartColor
 

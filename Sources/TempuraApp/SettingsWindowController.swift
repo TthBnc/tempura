@@ -7,8 +7,8 @@ final class SettingsWindowController: NSWindowController {
         let window = NSWindow(contentViewController: viewController)
         window.title = "General"
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.contentMinSize = NSSize(width: 488, height: 430)
-        window.setContentSize(NSSize(width: 488, height: 430))
+        window.contentMinSize = NSSize(width: 488, height: 476)
+        window.setContentSize(NSSize(width: 488, height: 476))
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
         window.center()
@@ -40,12 +40,18 @@ final class SettingsWindowController: NSWindowController {
 private final class SettingsViewController: NSViewController {
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Start at Login", target: nil, action: nil)
     private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
+    private let temperatureUnitControl = NSSegmentedControl(
+        labels: ["°C", "°F"],
+        trackingMode: .selectOne,
+        target: nil,
+        action: nil
+    )
     private let versionLabel = NSTextField(labelWithString: "")
     private let updateButton = NSButton(title: "Check for Updates", target: nil, action: nil)
     private let quitButton = NSButton(title: "Quit Tempura", target: NSApp, action: #selector(NSApplication.terminate(_:)))
 
     override func loadView() {
-        let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 488, height: 430))
+        let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 488, height: 476))
         visualEffectView.material = .windowBackground
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.state = .active
@@ -70,6 +76,13 @@ private final class SettingsViewController: NSViewController {
             ]
         )
 
+        let displaySection = makeSection(
+            title: "DISPLAY",
+            views: [
+                makeTemperatureUnitRow()
+            ]
+        )
+
         let aboutSection = makeSection(
             title: "ABOUT",
             views: [
@@ -79,6 +92,7 @@ private final class SettingsViewController: NSViewController {
 
         let firstSeparator = makeSeparator()
         let secondSeparator = makeSeparator()
+        let thirdSeparator = makeSeparator()
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
 
@@ -91,6 +105,8 @@ private final class SettingsViewController: NSViewController {
             firstSeparator,
             updatesSection,
             secondSeparator,
+            displaySection,
+            thirdSeparator,
             aboutSection,
             spacer,
             quitRow
@@ -113,6 +129,8 @@ private final class SettingsViewController: NSViewController {
             firstSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
             updatesSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
             secondSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
+            displaySection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
+            thirdSeparator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
             aboutSection.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
             quitRow.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -72),
             quitButton.widthAnchor.constraint(equalToConstant: 120)
@@ -134,6 +152,12 @@ private final class SettingsViewController: NSViewController {
         launchAtLoginStatusLabel.font = .systemFont(ofSize: 11, weight: .regular)
         launchAtLoginStatusLabel.textColor = .secondaryLabelColor
         launchAtLoginStatusLabel.lineBreakMode = .byTruncatingTail
+
+        temperatureUnitControl.target = self
+        temperatureUnitControl.action = #selector(changeTemperatureUnit(_:))
+        temperatureUnitControl.segmentStyle = .rounded
+        temperatureUnitControl.setWidth(52, forSegment: 0)
+        temperatureUnitControl.setWidth(52, forSegment: 1)
 
         versionLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         versionLabel.textColor = .secondaryLabelColor
@@ -210,6 +234,34 @@ private final class SettingsViewController: NSViewController {
         return row
     }
 
+    private func makeTemperatureUnitRow() -> NSStackView {
+        let titleLabel = NSTextField(labelWithString: "Temperature Unit")
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textColor = .labelColor
+
+        let helpLabel = NSTextField(labelWithString: "Controls the menu bar, panel value, and chart labels.")
+        helpLabel.font = .systemFont(ofSize: 11, weight: .regular)
+        helpLabel.textColor = .secondaryLabelColor
+        helpLabel.lineBreakMode = .byTruncatingTail
+
+        let textStack = NSStackView(views: [titleLabel, helpLabel])
+        textStack.orientation = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 4
+
+        let row = NSStackView(views: [textStack, NSView(), temperatureUnitControl])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = 12
+
+        NSLayoutConstraint.activate([
+            textStack.widthAnchor.constraint(greaterThanOrEqualToConstant: 250),
+            temperatureUnitControl.widthAnchor.constraint(equalToConstant: 108)
+        ])
+
+        return row
+    }
+
     private func makeAboutStack() -> NSStackView {
         let nameLabel = NSTextField(labelWithString: "Tempura")
         nameLabel.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -242,6 +294,7 @@ private final class SettingsViewController: NSViewController {
     private func refreshState() {
         launchAtLoginCheckbox.state = LaunchAtLoginController.isEnabled ? .on : .off
         launchAtLoginStatusLabel.stringValue = LaunchAtLoginController.statusMessage
+        temperatureUnitControl.selectedSegment = TemperatureUnit.current == .celsius ? 0 : 1
         versionLabel.stringValue = applicationVersionText
     }
 
@@ -252,6 +305,11 @@ private final class SettingsViewController: NSViewController {
             showLaunchAtLoginError(error)
         }
 
+        refreshState()
+    }
+
+    @objc private func changeTemperatureUnit(_ sender: NSSegmentedControl) {
+        TemperatureUnit.current = sender.selectedSegment == 1 ? .fahrenheit : .celsius
         refreshState()
     }
 
