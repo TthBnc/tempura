@@ -36,7 +36,7 @@ fallback, in which case use the xattr command above.
 
 ## Compatibility
 
-Tempura requires macOS 13 Ventura or newer.
+Tempura requires macOS 13 Ventura or newer on an Apple Silicon Mac.
 
 ## What It Does
 
