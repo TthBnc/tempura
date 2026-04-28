@@ -3,21 +3,23 @@ import TempuraCore
 
 @MainActor
 final class ThermalPanelViewController: NSViewController {
-    static let preferredContentSize = NSSize(width: 300, height: 418)
+    static let preferredContentSize = NSSize(
+        width: TempuraDesign.Layout.panelWidth,
+        height: TempuraDesign.Layout.panelHeight
+    )
 
     var settingsRequested: (() -> Void)?
 
     private let currentValueLabel = NSTextField(labelWithString: "--°C")
     private let sourceLabel = NSTextField(labelWithString: "No reading")
     private let chartView = ThermalChartView()
-    private let throttleView = ThrottleRiskView()
-    private let memoryView = MemoryUsageView()
+    private let systemPressureView = SystemPressureView()
     private let settingsButton = NSButton()
     private let quitButton = NSButton()
     private var temperatureUnit = TemperatureUnit.current
 
     override func loadView() {
-        let backdropView = PanelGlassBackdropView(
+        let backdropView = TempuraGlassBackdropView(
             frame: NSRect(origin: .zero, size: Self.preferredContentSize)
         )
         view = backdropView
@@ -26,11 +28,11 @@ final class ThermalPanelViewController: NSViewController {
         configureButtons()
 
         let titleLabel = NSTextField(labelWithString: "Thermal")
-        titleLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+        titleLabel.font = TempuraDesign.Font.panelTitle
         titleLabel.textColor = .secondaryLabelColor
 
         let windowLabel = NSTextField(labelWithString: "Last 60s")
-        windowLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        windowLabel.font = TempuraDesign.Font.panelWindow
         windowLabel.textColor = .tertiaryLabelColor
 
         let headerStack = NSStackView(views: [titleLabel, NSView(), windowLabel])
@@ -51,15 +53,19 @@ final class ThermalPanelViewController: NSViewController {
             headerStack,
             valueStack,
             chartView,
-            throttleView,
-            memoryView,
+            systemPressureView,
             separator,
             actionStack
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 12, right: 14)
+        stack.spacing = TempuraDesign.Layout.panelSpacing
+        stack.edgeInsets = NSEdgeInsets(
+            top: TempuraDesign.Layout.panelInset,
+            left: TempuraDesign.Layout.panelInset,
+            bottom: 12,
+            right: TempuraDesign.Layout.panelInset
+        )
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         backdropView.contentView.addSubview(stack)
@@ -70,16 +76,14 @@ final class ThermalPanelViewController: NSViewController {
             stack.topAnchor.constraint(equalTo: backdropView.contentView.topAnchor),
             stack.bottomAnchor.constraint(equalTo: backdropView.contentView.bottomAnchor),
 
-            headerStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
-            valueStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
-            chartView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
-            chartView.heightAnchor.constraint(equalToConstant: 112),
-            throttleView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
-            throttleView.heightAnchor.constraint(equalToConstant: 54),
-            memoryView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
-            memoryView.heightAnchor.constraint(equalToConstant: 70),
-            separator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
-            actionStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28)
+            headerStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
+            valueStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
+            chartView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
+            chartView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.chartHeight),
+            systemPressureView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
+            systemPressureView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.systemPressureHeight),
+            separator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
+            actionStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset)
         ])
     }
 
@@ -106,16 +110,15 @@ final class ThermalPanelViewController: NSViewController {
         }
 
         chartView.samples = samples
-        throttleView.status = throttleStatus
-        memoryView.status = memoryStatus
+        systemPressureView.update(throttleStatus: throttleStatus, memoryStatus: memoryStatus)
     }
 
     private func configureLabels() {
-        currentValueLabel.font = .monospacedDigitSystemFont(ofSize: 28, weight: .semibold)
+        currentValueLabel.font = TempuraDesign.Font.primaryValue
         currentValueLabel.textColor = .disabledControlTextColor
         currentValueLabel.lineBreakMode = .byClipping
 
-        sourceLabel.font = .systemFont(ofSize: 11, weight: .regular)
+        sourceLabel.font = TempuraDesign.Font.source
         sourceLabel.textColor = .tertiaryLabelColor
         sourceLabel.lineBreakMode = .byTruncatingTail
     }
@@ -147,7 +150,7 @@ final class ThermalPanelViewController: NSViewController {
         button.image = nil
         button.bezelStyle = .rounded
         button.controlSize = .regular
-        button.font = .systemFont(ofSize: 13, weight: weight)
+        button.font = weight == .medium ? TempuraDesign.Font.buttonStrong : TempuraDesign.Font.button
         button.target = target ?? self
         button.action = action
     }
@@ -156,7 +159,7 @@ final class ThermalPanelViewController: NSViewController {
         let stack = NSStackView(views: [settingsButton, quitButton])
         stack.orientation = .horizontal
         stack.alignment = .centerY
-        stack.spacing = 8
+        stack.spacing = TempuraDesign.Layout.actionSpacing
         stack.distribution = .fill
 
         NSLayoutConstraint.activate([
@@ -172,58 +175,73 @@ final class ThermalPanelViewController: NSViewController {
     }
 }
 
-private final class ThrottleRiskView: NSView {
-    var status = ThrottleStatus.unavailable {
-        didSet {
-            applyStatus()
-        }
-    }
-
-    private let captionLabel = NSTextField(labelWithString: "Throttle Risk")
+private final class SystemPressureView: TempuraGlassCardView {
+    private let captionLabel = NSTextField(labelWithString: "System Pressure")
     private let riskLabel = NSTextField(labelWithString: ThrottleRisk.unavailable.title)
-    private let detailLabel = NSTextField(labelWithString: ThrottleStatus.unavailable.detail)
-    private let meterView = ThrottleRiskMeterView()
+    private let throttleDetailLabel = NSTextField(labelWithString: ThrottleStatus.unavailable.detail)
+    private let throttleMeterView = TempuraMeterView()
+    private let memoryCaptionLabel = NSTextField(labelWithString: "Memory")
+    private let memoryValueLabel = NSTextField(labelWithString: "--")
+    private let memoryMeterView = TempuraMeterView()
+    private let swapCaptionLabel = NSTextField(labelWithString: "Swap Overflow")
+    private let swapValueLabel = NSTextField(labelWithString: "--")
+    private let swapMeterView = TempuraMeterView()
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        configureView()
         configureLabels()
         configureLayout()
-        applyStatus()
-        applyPalette()
+        update(throttleStatus: .unavailable, memoryStatus: .unavailable)
+        configureAccessibility()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        configureView()
         configureLabels()
         configureLayout()
-        applyStatus()
-        applyPalette()
+        update(throttleStatus: .unavailable, memoryStatus: .unavailable)
+        configureAccessibility()
     }
 
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        applyPalette()
-    }
+    func update(throttleStatus: ThrottleStatus, memoryStatus: MemoryUsageStatus) {
+        riskLabel.stringValue = throttleStatus.risk.title
+        riskLabel.textColor = throttleStatus.risk.tintColor
+        throttleDetailLabel.stringValue = throttleStatus.detail
+        throttleMeterView.progress = throttleStatus.risk.meterProgress
+        throttleMeterView.tintColor = throttleStatus.risk.tintColor
 
-    private func configureView() {
-        wantsLayer = true
-        layer?.cornerRadius = 8
-        layer?.cornerCurve = .continuous
+        memoryValueLabel.stringValue = memoryStatus.isAvailable ? memoryStatus.memoryPercentTitle : "--"
+        memoryValueLabel.textColor = memoryStatus.memoryLevel.tintColor
+        memoryMeterView.progress = memoryStatus.isAvailable ? CGFloat(memoryStatus.memoryFraction) : 0.08
+        memoryMeterView.tintColor = memoryStatus.memoryLevel.tintColor
+
+        swapValueLabel.stringValue = memoryStatus.isAvailable ? memoryStatus.swapOverflowTitle : "--"
+        swapValueLabel.textColor = memoryStatus.swapLevel.tintColor
+        swapMeterView.progress = memoryStatus.isAvailable ? CGFloat(memoryStatus.swapOverflowFraction) : 0.08
+        swapMeterView.tintColor = memoryStatus.swapLevel.tintColor
+
+        setAccessibilityValue(accessibilityValue(throttleStatus: throttleStatus, memoryStatus: memoryStatus))
     }
 
     private func configureLabels() {
-        captionLabel.font = .systemFont(ofSize: 11, weight: .semibold)
-        captionLabel.textColor = .secondaryLabelColor
+        [captionLabel, memoryCaptionLabel, swapCaptionLabel].forEach { label in
+            label.font = TempuraDesign.Font.cardCaption
+            label.textColor = .secondaryLabelColor
+        }
 
-        riskLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        riskLabel.font = TempuraDesign.Font.cardValue
         riskLabel.alignment = .right
         riskLabel.lineBreakMode = .byTruncatingTail
 
-        detailLabel.font = .systemFont(ofSize: 10.5, weight: .regular)
-        detailLabel.textColor = .tertiaryLabelColor
-        detailLabel.lineBreakMode = .byTruncatingTail
+        [memoryValueLabel, swapValueLabel].forEach { label in
+            label.font = TempuraDesign.Font.cardValueSmall
+            label.alignment = .right
+            label.lineBreakMode = .byClipping
+        }
+
+        throttleDetailLabel.font = TempuraDesign.Font.cardDetail
+        throttleDetailLabel.textColor = .tertiaryLabelColor
+        throttleDetailLabel.lineBreakMode = .byTruncatingTail
     }
 
     private func configureLayout() {
@@ -232,150 +250,13 @@ private final class ThrottleRiskView: NSView {
         topStack.alignment = .centerY
         topStack.spacing = 8
 
-        let stack = NSStackView(views: [topStack, detailLabel, meterView])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 5
-        stack.translatesAutoresizingMaskIntoConstraints = false
+        let throttleStack = NSStackView(views: [topStack, throttleDetailLabel, throttleMeterView])
+        throttleStack.orientation = .vertical
+        throttleStack.alignment = .leading
+        throttleStack.spacing = 5
 
-        addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-
-            topStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            detailLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            meterView.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            meterView.heightAnchor.constraint(equalToConstant: 5)
-        ])
-    }
-
-    private func applyStatus() {
-        riskLabel.stringValue = status.risk.title
-        riskLabel.textColor = status.risk.tintColor
-        detailLabel.stringValue = status.detail
-        meterView.status = status
-    }
-
-    private func applyPalette() {
-        let fillAlpha: CGFloat = isDarkAppearance ? 0.18 : 0.24
-        layer?.backgroundColor = NSColor.controlBackgroundColor
-            .withAlphaComponent(fillAlpha)
-            .cgColor
-    }
-
-    private var isDarkAppearance: Bool {
-        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-    }
-}
-
-private final class ThrottleRiskMeterView: NSView {
-    var status = ThrottleStatus.unavailable {
-        didSet {
-            needsDisplay = true
-        }
-    }
-
-    override var isFlipped: Bool {
-        true
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-
-        let trackRect = bounds.insetBy(dx: 0, dy: 0.5)
-        let trackPath = NSBezierPath(
-            roundedRect: trackRect,
-            xRadius: trackRect.height / 2,
-            yRadius: trackRect.height / 2
-        )
-        NSColor.separatorColor.withAlphaComponent(0.28).setFill()
-        trackPath.fill()
-
-        let fillWidth = max(trackRect.width * status.risk.meterProgress, trackRect.height)
-        let fillRect = NSRect(
-            x: trackRect.minX,
-            y: trackRect.minY,
-            width: fillWidth,
-            height: trackRect.height
-        )
-        let fillPath = NSBezierPath(
-            roundedRect: fillRect,
-            xRadius: fillRect.height / 2,
-            yRadius: fillRect.height / 2
-        )
-        status.risk.tintColor.setFill()
-        fillPath.fill()
-    }
-}
-
-private final class MemoryUsageView: NSView {
-    var status = MemoryUsageStatus.unavailable {
-        didSet {
-            applyStatus()
-        }
-    }
-
-    private let captionLabel = NSTextField(labelWithString: "Memory")
-    private let memoryValueLabel = NSTextField(labelWithString: "--")
-    private let swapCaptionLabel = NSTextField(labelWithString: "Swap Overflow")
-    private let swapValueLabel = NSTextField(labelWithString: "--")
-    private let detailLabel = NSTextField(labelWithString: MemoryUsageStatus.unavailable.detail)
-    private let memoryMeterView = UsageMeterView()
-    private let swapMeterView = UsageMeterView()
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        configureView()
-        configureLabels()
-        configureLayout()
-        applyStatus()
-        applyPalette()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        configureView()
-        configureLabels()
-        configureLayout()
-        applyStatus()
-        applyPalette()
-    }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        applyPalette()
-    }
-
-    private func configureView() {
-        wantsLayer = true
-        layer?.cornerRadius = 8
-        layer?.cornerCurve = .continuous
-    }
-
-    private func configureLabels() {
-        [captionLabel, swapCaptionLabel].forEach { label in
-            label.font = .systemFont(ofSize: 11, weight: .semibold)
-            label.textColor = .secondaryLabelColor
-        }
-
-        [memoryValueLabel, swapValueLabel].forEach { label in
-            label.font = .monospacedDigitSystemFont(ofSize: 12.5, weight: .semibold)
-            label.alignment = .right
-            label.lineBreakMode = .byClipping
-        }
-
-        detailLabel.font = .systemFont(ofSize: 10.5, weight: .regular)
-        detailLabel.textColor = .tertiaryLabelColor
-        detailLabel.lineBreakMode = .byTruncatingTail
-    }
-
-    private func configureLayout() {
         let memoryStack = makeMetricStack(
-            titleLabel: captionLabel,
+            titleLabel: memoryCaptionLabel,
             valueLabel: memoryValueLabel,
             meterView: memoryMeterView
         )
@@ -385,35 +266,39 @@ private final class MemoryUsageView: NSView {
             meterView: swapMeterView
         )
 
-        let meterStack = NSStackView(views: [memoryStack, swapStack])
-        meterStack.orientation = .horizontal
-        meterStack.alignment = .top
-        meterStack.spacing = 10
-        meterStack.distribution = .fillEqually
+        let resourceStack = NSStackView(views: [memoryStack, swapStack])
+        resourceStack.orientation = .horizontal
+        resourceStack.alignment = .top
+        resourceStack.spacing = 10
+        resourceStack.distribution = .fillEqually
 
-        let stack = NSStackView(views: [meterStack, detailLabel])
+        let stack = NSStackView(views: [throttleStack, resourceStack])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 7
+        stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 8),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: TempuraDesign.Layout.cardHorizontalInset),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -TempuraDesign.Layout.cardHorizontalInset),
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: TempuraDesign.Layout.cardVerticalInset),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -TempuraDesign.Layout.cardVerticalInset),
 
-            meterStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            detailLabel.widthAnchor.constraint(equalTo: stack.widthAnchor)
+            topStack.widthAnchor.constraint(equalTo: throttleStack.widthAnchor),
+            throttleDetailLabel.widthAnchor.constraint(equalTo: throttleStack.widthAnchor),
+            throttleMeterView.widthAnchor.constraint(equalTo: throttleStack.widthAnchor),
+            throttleMeterView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.meterHeight),
+            throttleStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            resourceStack.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
     }
 
     private func makeMetricStack(
         titleLabel: NSTextField,
         valueLabel: NSTextField,
-        meterView: UsageMeterView
+        meterView: TempuraMeterView
     ) -> NSStackView {
         let labelStack = NSStackView(views: [titleLabel, NSView(), valueLabel])
         labelStack.orientation = .horizontal
@@ -428,170 +313,35 @@ private final class MemoryUsageView: NSView {
         NSLayoutConstraint.activate([
             labelStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
             meterView.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            meterView.heightAnchor.constraint(equalToConstant: 5)
+            meterView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.meterHeight)
         ])
 
         return stack
     }
 
-    private func applyStatus() {
-        memoryValueLabel.stringValue = status.isAvailable ? status.memoryPercentTitle : "--"
-        memoryValueLabel.textColor = status.memoryLevel.tintColor
-
-        swapValueLabel.stringValue = status.isAvailable ? status.swapOverflowTitle : "--"
-        swapValueLabel.textColor = status.swapLevel.tintColor
-
-        detailLabel.stringValue = status.detail
-        memoryMeterView.progress = status.isAvailable ? CGFloat(status.memoryFraction) : 0.08
-        memoryMeterView.tintColor = status.memoryLevel.tintColor
-        swapMeterView.progress = status.isAvailable ? CGFloat(status.swapOverflowFraction) : 0.08
-        swapMeterView.tintColor = status.swapLevel.tintColor
+    private func configureAccessibility() {
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityLabel("System Pressure")
     }
 
-    private func applyPalette() {
-        let fillAlpha: CGFloat = isDarkAppearance ? 0.18 : 0.24
-        layer?.backgroundColor = NSColor.controlBackgroundColor
-            .withAlphaComponent(fillAlpha)
-            .cgColor
-    }
+    private func accessibilityValue(
+        throttleStatus: ThrottleStatus,
+        memoryStatus: MemoryUsageStatus
+    ) -> String {
+        var parts = [
+            "Throttle risk \(throttleStatus.risk.title)",
+            throttleStatus.detail
+        ]
 
-    private var isDarkAppearance: Bool {
-        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-    }
-}
-
-private final class UsageMeterView: NSView {
-    var progress: CGFloat = 0 {
-        didSet {
-            needsDisplay = true
-        }
-    }
-
-    var tintColor: NSColor = .disabledControlTextColor {
-        didSet {
-            needsDisplay = true
-        }
-    }
-
-    override var isFlipped: Bool {
-        true
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-
-        let trackRect = bounds.insetBy(dx: 0, dy: 0.5)
-        let trackPath = NSBezierPath(
-            roundedRect: trackRect,
-            xRadius: trackRect.height / 2,
-            yRadius: trackRect.height / 2
-        )
-        NSColor.separatorColor.withAlphaComponent(0.28).setFill()
-        trackPath.fill()
-
-        let clampedProgress = min(max(progress, 0), 1)
-        let fillWidth = max(trackRect.width * clampedProgress, trackRect.height)
-        let fillRect = NSRect(
-            x: trackRect.minX,
-            y: trackRect.minY,
-            width: fillWidth,
-            height: trackRect.height
-        )
-        let fillPath = NSBezierPath(
-            roundedRect: fillRect,
-            xRadius: fillRect.height / 2,
-            yRadius: fillRect.height / 2
-        )
-        tintColor.setFill()
-        fillPath.fill()
-    }
-}
-
-private final class PanelGlassBackdropView: NSVisualEffectView {
-    let contentView = NSView()
-
-    private let topHighlightView = NSView()
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-
-        configureSurface()
-        configureChrome()
-        applyGlassPalette()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-
-        configureSurface()
-        configureChrome()
-        applyGlassPalette()
-    }
-
-    override func viewDidChangeEffectiveAppearance() {
-        super.viewDidChangeEffectiveAppearance()
-        applyGlassPalette()
-    }
-
-    private func configureSurface() {
-        material = .popover
-        blendingMode = .behindWindow
-        state = .active
-        wantsLayer = true
-        layer?.cornerRadius = 18
-        layer?.cornerCurve = .continuous
-        layer?.masksToBounds = true
-    }
-
-    private func configureChrome() {
-        [contentView, topHighlightView].forEach { chromeView in
-            chromeView.translatesAutoresizingMaskIntoConstraints = false
-            chromeView.wantsLayer = true
-            addSubview(chromeView)
-        }
-
-        topHighlightView.layer?.cornerRadius = 0.5
-
-        NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            contentView.topAnchor.constraint(equalTo: topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            topHighlightView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 14),
-            topHighlightView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -14),
-            topHighlightView.topAnchor.constraint(equalTo: topAnchor),
-            topHighlightView.heightAnchor.constraint(equalToConstant: 1)
-        ])
-    }
-
-    private func applyGlassPalette() {
-        let palette = GlassPalette(isDark: isDarkAppearance)
-        layer?.backgroundColor = palette.fill.cgColor
-        layer?.borderColor = palette.stroke.cgColor
-        layer?.borderWidth = 1
-        topHighlightView.layer?.backgroundColor = palette.topHighlight.cgColor
-    }
-
-    private var isDarkAppearance: Bool {
-        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-    }
-}
-
-private struct GlassPalette {
-    let fill: NSColor
-    let stroke: NSColor
-    let topHighlight: NSColor
-
-    init(isDark: Bool) {
-        if isDark {
-            fill = NSColor(calibratedWhite: 1, alpha: 0.02)
-            stroke = NSColor(calibratedWhite: 1, alpha: 0.08)
-            topHighlight = NSColor(calibratedWhite: 1, alpha: 0.12)
+        if memoryStatus.isAvailable {
+            parts.append("Memory \(memoryStatus.memoryPercentTitle)")
+            parts.append("Swap overflow \(memoryStatus.swapOverflowTitle)")
+            parts.append(memoryStatus.detail)
         } else {
-            fill = NSColor(calibratedWhite: 1, alpha: 0.20)
-            stroke = NSColor(calibratedWhite: 1, alpha: 0.46)
-            topHighlight = NSColor(calibratedWhite: 1, alpha: 0.68)
+            parts.append("Memory data unavailable")
         }
+
+        return parts.joined(separator: ". ")
     }
 }
