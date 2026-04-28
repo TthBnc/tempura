@@ -3,13 +3,14 @@ import TempuraCore
 
 @MainActor
 final class ThermalPanelViewController: NSViewController {
-    static let preferredContentSize = NSSize(width: 300, height: 276)
+    static let preferredContentSize = NSSize(width: 300, height: 338)
 
     var settingsRequested: (() -> Void)?
 
     private let currentValueLabel = NSTextField(labelWithString: "--°C")
     private let sourceLabel = NSTextField(labelWithString: "No reading")
     private let chartView = ThermalChartView()
+    private let throttleView = ThrottleRiskView()
     private let settingsButton = NSButton()
     private let quitButton = NSButton()
     private var temperatureUnit = TemperatureUnit.current
@@ -49,6 +50,7 @@ final class ThermalPanelViewController: NSViewController {
             headerStack,
             valueStack,
             chartView,
+            throttleView,
             separator,
             actionStack
         ])
@@ -70,6 +72,8 @@ final class ThermalPanelViewController: NSViewController {
             valueStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
             chartView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
             chartView.heightAnchor.constraint(equalToConstant: 112),
+            throttleView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
+            throttleView.heightAnchor.constraint(equalToConstant: 54),
             separator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
             actionStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28)
         ])
@@ -80,7 +84,11 @@ final class ThermalPanelViewController: NSViewController {
         chartView.temperatureUnit = unit
     }
 
-    func update(samples: [TemperatureSample], currentReading: TemperatureReading?) {
+    func update(
+        samples: [TemperatureSample],
+        currentReading: TemperatureReading?,
+        throttleStatus: ThrottleStatus
+    ) {
         let displayState = DisplayState(reading: currentReading, unit: temperatureUnit)
         currentValueLabel.stringValue = displayState.title
         currentValueLabel.textColor = displayState.bucket.chartColor
@@ -93,6 +101,7 @@ final class ThermalPanelViewController: NSViewController {
         }
 
         chartView.samples = samples
+        throttleView.status = throttleStatus
     }
 
     private func configureLabels() {
@@ -154,6 +163,146 @@ final class ThermalPanelViewController: NSViewController {
 
     @objc private func openSettings(_ sender: Any?) {
         settingsRequested?()
+    }
+}
+
+private final class ThrottleRiskView: NSView {
+    var status = ThrottleStatus.unavailable {
+        didSet {
+            applyStatus()
+        }
+    }
+
+    private let captionLabel = NSTextField(labelWithString: "Throttle Risk")
+    private let riskLabel = NSTextField(labelWithString: ThrottleRisk.unavailable.title)
+    private let detailLabel = NSTextField(labelWithString: ThrottleStatus.unavailable.detail)
+    private let meterView = ThrottleRiskMeterView()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        configureView()
+        configureLabels()
+        configureLayout()
+        applyStatus()
+        applyPalette()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        configureView()
+        configureLabels()
+        configureLayout()
+        applyStatus()
+        applyPalette()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyPalette()
+    }
+
+    private func configureView() {
+        wantsLayer = true
+        layer?.cornerRadius = 8
+        layer?.cornerCurve = .continuous
+    }
+
+    private func configureLabels() {
+        captionLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        captionLabel.textColor = .secondaryLabelColor
+
+        riskLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        riskLabel.alignment = .right
+        riskLabel.lineBreakMode = .byTruncatingTail
+
+        detailLabel.font = .systemFont(ofSize: 10.5, weight: .regular)
+        detailLabel.textColor = .tertiaryLabelColor
+        detailLabel.lineBreakMode = .byTruncatingTail
+    }
+
+    private func configureLayout() {
+        let topStack = NSStackView(views: [captionLabel, NSView(), riskLabel])
+        topStack.orientation = .horizontal
+        topStack.alignment = .centerY
+        topStack.spacing = 8
+
+        let stack = NSStackView(views: [topStack, detailLabel, meterView])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 5
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+
+            topStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            detailLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            meterView.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            meterView.heightAnchor.constraint(equalToConstant: 5)
+        ])
+    }
+
+    private func applyStatus() {
+        riskLabel.stringValue = status.risk.title
+        riskLabel.textColor = status.risk.tintColor
+        detailLabel.stringValue = status.detail
+        meterView.status = status
+    }
+
+    private func applyPalette() {
+        let fillAlpha: CGFloat = isDarkAppearance ? 0.18 : 0.24
+        layer?.backgroundColor = NSColor.controlBackgroundColor
+            .withAlphaComponent(fillAlpha)
+            .cgColor
+    }
+
+    private var isDarkAppearance: Bool {
+        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
+}
+
+private final class ThrottleRiskMeterView: NSView {
+    var status = ThrottleStatus.unavailable {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
+    override var isFlipped: Bool {
+        true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let trackRect = bounds.insetBy(dx: 0, dy: 0.5)
+        let trackPath = NSBezierPath(
+            roundedRect: trackRect,
+            xRadius: trackRect.height / 2,
+            yRadius: trackRect.height / 2
+        )
+        NSColor.separatorColor.withAlphaComponent(0.28).setFill()
+        trackPath.fill()
+
+        let fillWidth = max(trackRect.width * status.risk.meterProgress, trackRect.height)
+        let fillRect = NSRect(
+            x: trackRect.minX,
+            y: trackRect.minY,
+            width: fillWidth,
+            height: trackRect.height
+        )
+        let fillPath = NSBezierPath(
+            roundedRect: fillRect,
+            xRadius: fillRect.height / 2,
+            yRadius: fillRect.height / 2
+        )
+        status.risk.tintColor.setFill()
+        fillPath.fill()
     }
 }
 

@@ -15,6 +15,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var readInFlight = false
     private var lastDisplayState: DisplayState?
     private var currentReading: TemperatureReading?
+    private var currentThrottleStatus = ThrottleStatus.unavailable
     private var history = TemperatureHistory(retention: 60)
     private var localDismissMonitor: Any?
     private var globalDismissMonitor: Any?
@@ -130,7 +131,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         updateDisplay(DisplayState(reading: currentReading, unit: unit))
         panelViewController.update(
             samples: history.samples,
-            currentReading: currentReading
+            currentReading: currentReading,
+            throttleStatus: currentThrottleStatus
         )
     }
 
@@ -149,7 +151,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         panelViewController.update(
             samples: history.samples,
-            currentReading: currentReading
+            currentReading: currentReading,
+            throttleStatus: currentThrottleStatus
         )
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         button.highlight(true)
@@ -247,15 +250,24 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         readQueue.async { [provider] in
             let reading = provider.readCurrentTemperature()
+            let pressure = SystemThermalPressure.current
+            let thermalLimit = ThermalLimitReader.readCurrent()
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.readInFlight = false
                 self.currentReading = reading
                 self.history.record(reading)
+                self.currentThrottleStatus = ThrottleStatus(
+                    reading: reading,
+                    samples: self.history.samples,
+                    pressure: pressure,
+                    thermalLimit: thermalLimit
+                )
                 self.updateDisplay(DisplayState(reading: reading, unit: self.temperatureUnit))
                 self.panelViewController.update(
                     samples: self.history.samples,
-                    currentReading: reading
+                    currentReading: reading,
+                    throttleStatus: self.currentThrottleStatus
                 )
             }
         }
