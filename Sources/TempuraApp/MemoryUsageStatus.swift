@@ -164,15 +164,13 @@ struct MemoryUsageReader {
             return nil
         }
 
-        let immediatelyAvailablePages = UInt64(snapshot.statistics.free_count)
-            + UInt64(snapshot.statistics.speculative_count)
-        let availableBytes = immediatelyAvailablePages * UInt64(snapshot.pageSize)
+        // Match Activity Monitor's useful "Memory Used" shape by excluding cached file-backed pages.
+        let usedPages = UInt64(snapshot.statistics.internal_page_count)
+            + UInt64(snapshot.statistics.wire_count)
+            + UInt64(snapshot.statistics.compressor_page_count)
+        let usedBytes = usedPages * UInt64(snapshot.pageSize)
 
-        guard physicalBytes > availableBytes else {
-            return 0
-        }
-
-        return physicalBytes - availableBytes
+        return min(usedBytes, physicalBytes)
     }
 
     private static func readVirtualMemorySnapshot() -> VirtualMemorySnapshot? {
