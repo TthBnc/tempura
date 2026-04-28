@@ -7,8 +7,8 @@ final class SettingsWindowController: NSWindowController {
         let window = NSWindow(contentViewController: viewController)
         window.title = "General"
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.contentMinSize = NSSize(width: 488, height: 476)
-        window.setContentSize(NSSize(width: 488, height: 476))
+        window.contentMinSize = NSSize(width: 488, height: 560)
+        window.setContentSize(NSSize(width: 488, height: 560))
         window.isReleasedWhenClosed = false
         window.tabbingMode = .disallowed
         window.center()
@@ -40,6 +40,15 @@ final class SettingsWindowController: NSWindowController {
 private final class SettingsViewController: NSViewController {
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Start at Login", target: nil, action: nil)
     private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
+    private let menuBarTemperatureCheckbox = NSButton(checkboxWithTitle: "Temperature", target: nil, action: nil)
+    private let menuBarMemoryCheckbox = NSButton(checkboxWithTitle: "Memory", target: nil, action: nil)
+    private let menuBarSwapCheckbox = NSButton(checkboxWithTitle: "Swap", target: nil, action: nil)
+    private let menuBarLabelStyleControl = NSSegmentedControl(
+        labels: MenuBarMemoryLabelStyle.allCases.map(\.displayName),
+        trackingMode: .selectOne,
+        target: nil,
+        action: nil
+    )
     private let temperatureUnitControl = NSSegmentedControl(
         labels: ["°C", "°F"],
         trackingMode: .selectOne,
@@ -51,7 +60,7 @@ private final class SettingsViewController: NSViewController {
     private let quitButton = NSButton(title: "Quit Tempura", target: NSApp, action: #selector(NSApplication.terminate(_:)))
 
     override func loadView() {
-        let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 488, height: 476))
+        let visualEffectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: 488, height: 560))
         visualEffectView.material = .windowBackground
         visualEffectView.blendingMode = .behindWindow
         visualEffectView.state = .active
@@ -79,7 +88,9 @@ private final class SettingsViewController: NSViewController {
         let displaySection = makeSection(
             title: "DISPLAY",
             views: [
-                makeTemperatureUnitRow()
+                makeTemperatureUnitRow(),
+                makeMenuBarMetricsStack(),
+                makeMenuBarLabelStyleRow()
             ]
         )
 
@@ -152,6 +163,19 @@ private final class SettingsViewController: NSViewController {
         launchAtLoginStatusLabel.font = .systemFont(ofSize: 11, weight: .regular)
         launchAtLoginStatusLabel.textColor = .secondaryLabelColor
         launchAtLoginStatusLabel.lineBreakMode = .byTruncatingTail
+
+        [menuBarTemperatureCheckbox, menuBarMemoryCheckbox, menuBarSwapCheckbox].forEach { checkbox in
+            checkbox.font = .systemFont(ofSize: 13, weight: .regular)
+            checkbox.target = self
+            checkbox.action = #selector(changeMenuBarMetrics(_:))
+        }
+
+        menuBarLabelStyleControl.target = self
+        menuBarLabelStyleControl.action = #selector(changeMenuBarLabelStyle(_:))
+        menuBarLabelStyleControl.segmentStyle = .rounded
+        menuBarLabelStyleControl.setWidth(72, forSegment: 0)
+        menuBarLabelStyleControl.setWidth(72, forSegment: 1)
+        menuBarLabelStyleControl.setWidth(88, forSegment: 2)
 
         temperatureUnitControl.target = self
         temperatureUnitControl.action = #selector(changeTemperatureUnit(_:))
@@ -262,6 +286,66 @@ private final class SettingsViewController: NSViewController {
         return row
     }
 
+    private func makeMenuBarMetricsStack() -> NSStackView {
+        let titleLabel = NSTextField(labelWithString: "Menu Bar Metrics")
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textColor = .labelColor
+
+        let helpLabel = NSTextField(labelWithString: "Choose any combination to show beside the Tempura menu.")
+        helpLabel.font = .systemFont(ofSize: 11, weight: .regular)
+        helpLabel.textColor = .secondaryLabelColor
+        helpLabel.lineBreakMode = .byTruncatingTail
+
+        let checkboxStack = NSStackView(views: [
+            menuBarTemperatureCheckbox,
+            menuBarMemoryCheckbox,
+            menuBarSwapCheckbox
+        ])
+        checkboxStack.orientation = .horizontal
+        checkboxStack.alignment = .centerY
+        checkboxStack.spacing = 18
+
+        let stack = NSStackView(views: [titleLabel, helpLabel, checkboxStack])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+
+        NSLayoutConstraint.activate([
+            helpLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            checkboxStack.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor)
+        ])
+
+        return stack
+    }
+
+    private func makeMenuBarLabelStyleRow() -> NSStackView {
+        let titleLabel = NSTextField(labelWithString: "Memory and Swap Labels")
+        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        titleLabel.textColor = .labelColor
+
+        let helpLabel = NSTextField(labelWithString: "Full shows RAM/SWAP, slim shows M/S, compact shows percentages only.")
+        helpLabel.font = .systemFont(ofSize: 11, weight: .regular)
+        helpLabel.textColor = .secondaryLabelColor
+        helpLabel.lineBreakMode = .byTruncatingTail
+
+        let textStack = NSStackView(views: [titleLabel, helpLabel])
+        textStack.orientation = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 4
+
+        let row = NSStackView(views: [textStack, NSView(), menuBarLabelStyleControl])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = 12
+
+        NSLayoutConstraint.activate([
+            textStack.widthAnchor.constraint(greaterThanOrEqualToConstant: 190),
+            menuBarLabelStyleControl.widthAnchor.constraint(equalToConstant: 236)
+        ])
+
+        return row
+    }
+
     private func makeAboutStack() -> NSStackView {
         let nameLabel = NSTextField(labelWithString: "Tempura")
         nameLabel.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -295,6 +379,12 @@ private final class SettingsViewController: NSViewController {
         launchAtLoginCheckbox.state = LaunchAtLoginController.isEnabled ? .on : .off
         launchAtLoginStatusLabel.stringValue = LaunchAtLoginController.statusMessage
         temperatureUnitControl.selectedSegment = TemperatureUnit.current == .celsius ? 0 : 1
+        let menuBarSettings = MenuBarDisplaySettings.current
+        menuBarTemperatureCheckbox.state = menuBarSettings.showsTemperature ? .on : .off
+        menuBarMemoryCheckbox.state = menuBarSettings.showsMemory ? .on : .off
+        menuBarSwapCheckbox.state = menuBarSettings.showsSwap ? .on : .off
+        menuBarLabelStyleControl.selectedSegment = MenuBarMemoryLabelStyle.allCases
+            .firstIndex(of: menuBarSettings.memoryLabelStyle) ?? 1
         versionLabel.stringValue = applicationVersionText
     }
 
@@ -311,6 +401,30 @@ private final class SettingsViewController: NSViewController {
     @objc private func changeTemperatureUnit(_ sender: NSSegmentedControl) {
         TemperatureUnit.current = sender.selectedSegment == 1 ? .fahrenheit : .celsius
         refreshState()
+    }
+
+    @objc private func changeMenuBarMetrics(_ sender: NSButton) {
+        saveMenuBarSettingsFromControls()
+        refreshState()
+    }
+
+    @objc private func changeMenuBarLabelStyle(_ sender: NSSegmentedControl) {
+        saveMenuBarSettingsFromControls()
+        refreshState()
+    }
+
+    private func saveMenuBarSettingsFromControls() {
+        let styleIndex = menuBarLabelStyleControl.selectedSegment
+        let labelStyle = MenuBarMemoryLabelStyle.allCases.indices.contains(styleIndex)
+            ? MenuBarMemoryLabelStyle.allCases[styleIndex]
+            : .slim
+
+        MenuBarDisplaySettings.current = MenuBarDisplaySettings(
+            showsTemperature: menuBarTemperatureCheckbox.state == .on,
+            showsMemory: menuBarMemoryCheckbox.state == .on,
+            showsSwap: menuBarSwapCheckbox.state == .on,
+            memoryLabelStyle: labelStyle
+        )
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {

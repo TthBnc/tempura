@@ -13,7 +13,6 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
     private var timer: Timer?
     private var readInFlight = false
-    private var lastDisplayState: DisplayState?
     private var currentReading: TemperatureReading?
     private var currentThrottleStatus = ThrottleStatus.unavailable
     private var currentMemoryStatus = MemoryUsageStatus.unavailable
@@ -21,10 +20,11 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var localDismissMonitor: Any?
     private var globalDismissMonitor: Any?
     private var temperatureUnit = TemperatureUnit.current
+    private var menuBarSettings = MenuBarDisplaySettings.current
 
     init(provider: any TemperatureReadingProvider) {
         self.provider = provider
-        self.statusItem = NSStatusBar.system.statusItem(withLength: 54)
+        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         super.init()
 
@@ -32,7 +32,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         configureQuitMenu()
         configurePopover()
         configureTemperatureUnitObserver()
-        updateDisplay(DisplayState.unavailable)
+        configureMenuBarSettingsObserver()
+        updateDisplay()
         readTemperature()
 
         timer = Timer.scheduledTimer(
@@ -95,6 +96,15 @@ final class StatusController: NSObject, NSPopoverDelegate {
         )
     }
 
+    private func configureMenuBarSettingsObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(menuBarSettingsDidChange(_:)),
+            name: .menuBarDisplaySettingsDidChange,
+            object: nil
+        )
+    }
+
     private func configurePopover() {
         popover.behavior = .transient
         popover.animates = true
@@ -128,14 +138,22 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         temperatureUnit = unit
         panelViewController.setTemperatureUnit(unit)
-        lastDisplayState = nil
-        updateDisplay(DisplayState(reading: currentReading, unit: unit))
+        updateDisplay()
         panelViewController.update(
             samples: history.samples,
             currentReading: currentReading,
             throttleStatus: currentThrottleStatus,
             memoryStatus: currentMemoryStatus
         )
+    }
+
+    @objc private func menuBarSettingsDidChange(_ notification: Notification) {
+        guard let settings = notification.object as? MenuBarDisplaySettings else {
+            return
+        }
+
+        menuBarSettings = settings
+        updateDisplay()
     }
 
     private func togglePanel() {
@@ -268,7 +286,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
                     pressure: pressure,
                     thermalLimit: thermalLimit
                 )
-                self.updateDisplay(DisplayState(reading: reading, unit: self.temperatureUnit))
+                self.updateDisplay()
                 self.panelViewController.update(
                     samples: self.history.samples,
                     currentReading: reading,
@@ -279,27 +297,134 @@ final class StatusController: NSObject, NSPopoverDelegate {
         }
     }
 
-    private func updateDisplay(_ state: DisplayState) {
-        guard state != lastDisplayState else {
-            return
-        }
-
-        lastDisplayState = state
-        statusItem.button?.attributedTitle = attributedTitle(for: state)
+    private func updateDisplay() {
+        let content = menuBarContent()
+        statusItem.length = NSStatusItem.variableLength
+        statusItem.button?.image = nil
+        statusItem.button?.attributedTitle = attributedTitle(for: content)
+        statusItem.button?.toolTip = content.tooltip
+        statusItem.button?.setAccessibilityLabel("Tempura \(content.plainTitle)")
     }
 
-    private func attributedTitle(for state: DisplayState) -> NSAttributedString {
+    private func menuBarContent() -> MenuBarContent {
+        var components: [MenuBarComponent] = []
+        let temperatureState = DisplayState(reading: currentReading, unit: temperatureUnit)
+
+        if menuBarSettings.showsTemperature {
+            components.append(
+                MenuBarComponent(
+                    title: temperatureState.title,
+                    color: temperatureState.bucket.menuColor
+                )
+            )
+        }
+
+        if menuBarSettings.showsMemory {
+            let percent = currentMemoryStatus.isAvailable ? currentMemoryStatus.memoryPercentTitle : "--"
+            components.append(
+                MenuBarComponent(
+                    title: menuBarSettings.memoryLabelStyle.memoryTitle(percent: percent),
+                    color: currentMemoryStatus.memoryLevel.menuColor
+                )
+            )
+        }
+
+        if menuBarSettings.showsSwap {
+            let percent = currentMemoryStatus.isAvailable ? currentMemoryStatus.swapOverflowTitle : "--"
+            components.append(
+                MenuBarComponent(
+                    title: menuBarSettings.memoryLabelStyle.swapTitle(percent: percent),
+                    color: currentMemoryStatus.swapLevel.menuColor
+                )
+            )
+        }
+
+        if components.isEmpty {
+            components.append(MenuBarComponent(title: "T", color: .labelColor))
+        }
+
+        return MenuBarContent(
+            components: components,
+            temperatureState: temperatureState,
+            memoryStatus: currentMemoryStatus,
+            settings: menuBarSettings
+        )
+    }
+
+    private func attributedTitle(for content: MenuBarContent) -> NSAttributedString {
         let font = NSFont.monospacedDigitSystemFont(ofSize: 13.5, weight: .semibold)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
+        let attributedTitle = NSMutableAttributedString()
 
-        return NSAttributedString(
-            string: state.title,
-            attributes: [
-                .font: font,
-                .foregroundColor: state.bucket.menuColor,
-                .paragraphStyle: paragraph
-            ]
-        )
+        for (index, component) in content.components.enumerated() {
+            if index > 0 {
+                attributedTitle.append(
+                    NSAttributedString(
+                        string: "  ",
+                        attributes: [
+                            .font: font,
+                            .foregroundColor: NSColor.tertiaryLabelColor,
+                            .paragraphStyle: paragraph
+                        ]
+                    )
+                )
+            }
+
+            attributedTitle.append(
+                NSAttributedString(
+                    string: component.title,
+                    attributes: [
+                        .font: font,
+                        .foregroundColor: component.color,
+                        .paragraphStyle: paragraph
+                    ]
+                )
+            )
+        }
+
+        return attributedTitle
+    }
+}
+
+private struct MenuBarComponent {
+    let title: String
+    let color: NSColor
+}
+
+private struct MenuBarContent {
+    let components: [MenuBarComponent]
+    let temperatureState: DisplayState
+    let memoryStatus: MemoryUsageStatus
+    let settings: MenuBarDisplaySettings
+
+    var plainTitle: String {
+        components.map(\.title).joined(separator: "  ")
+    }
+
+    var tooltip: String {
+        var lines = ["Tempura"]
+
+        if settings.showsTemperature {
+            lines.append("Temperature: \(temperatureState.title)")
+        }
+
+        if settings.showsMemory {
+            lines.append("Memory: \(memoryStatus.isAvailable ? memoryStatus.memoryPercentTitle : "--")")
+        }
+
+        if settings.showsSwap {
+            lines.append("Swap overflow: \(memoryStatus.isAvailable ? memoryStatus.swapOverflowTitle : "--")")
+        }
+
+        if !settings.showsTemperature && !settings.showsMemory && !settings.showsSwap {
+            lines.append("No menu bar metrics selected")
+        }
+
+        if memoryStatus.isAvailable && (settings.showsMemory || settings.showsSwap) {
+            lines.append(memoryStatus.detail)
+        }
+
+        return lines.joined(separator: "\n")
     }
 }
