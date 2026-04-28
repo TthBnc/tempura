@@ -163,11 +163,11 @@ enum ThrottleRisk: Int, Equatable {
         case .normal:
             return TemperatureBucket.normalColor
         case .elevated:
-            return TemperatureBucket.warmColor
+            return TempuraDesign.Color.statusWarm
         case .likely:
-            return NSColor(calibratedRed: 0.88, green: 0.46, blue: 0.18, alpha: 1)
+            return TempuraDesign.Color.statusLikely
         case .severe:
-            return TemperatureBucket.hotColor
+            return TempuraDesign.Color.statusHot
         }
     }
 

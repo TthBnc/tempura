@@ -352,7 +352,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     }
 
     private func attributedTitle(for content: MenuBarContent) -> NSAttributedString {
-        let font = NSFont.monospacedDigitSystemFont(ofSize: 13.5, weight: .semibold)
+        let font = TempuraDesign.Font.menuBar
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         let attributedTitle = NSMutableAttributedString()

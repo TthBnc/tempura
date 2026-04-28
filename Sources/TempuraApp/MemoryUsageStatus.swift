@@ -12,11 +12,11 @@ enum MemoryUsageLevel: Int, Equatable {
         case .unavailable:
             return .disabledControlTextColor
         case .normal:
-            return TemperatureBucket.normalColor
+            return TempuraDesign.Color.statusNormal
         case .elevated:
-            return TemperatureBucket.warmColor
+            return TempuraDesign.Color.statusWarm
         case .high:
-            return TemperatureBucket.hotColor
+            return TempuraDesign.Color.statusHot
         }
     }
 
@@ -27,28 +27,10 @@ enum MemoryUsageLevel: Int, Equatable {
         case .normal:
             return .labelColor
         case .elevated:
-            return Self.warningMenuColor
+            return TempuraDesign.Color.warningMenu
         case .high:
-            return Self.criticalMenuColor
+            return TempuraDesign.Color.criticalMenu
         }
-    }
-
-    private static let warningMenuColor = NSColor(name: nil) { appearance in
-        let match = appearance.bestMatch(from: [.darkAqua, .aqua])
-        if match == .darkAqua {
-            return NSColor(calibratedRed: 1.00, green: 0.74, blue: 0.24, alpha: 1)
-        }
-
-        return NSColor(calibratedRed: 0.74, green: 0.39, blue: 0.00, alpha: 1)
-    }
-
-    private static let criticalMenuColor = NSColor(name: nil) { appearance in
-        let match = appearance.bestMatch(from: [.darkAqua, .aqua])
-        if match == .darkAqua {
-            return NSColor(calibratedRed: 1.00, green: 0.42, blue: 0.34, alpha: 1)
-        }
-
-        return NSColor(calibratedRed: 0.82, green: 0.12, blue: 0.08, alpha: 1)
     }
 }
 

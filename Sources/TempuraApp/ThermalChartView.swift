@@ -83,13 +83,17 @@ final class ThermalChartView: NSView {
 
     private func configureLayer() {
         wantsLayer = true
-        layer?.cornerRadius = 8
+        layer?.cornerRadius = TempuraDesign.Radius.chart
         layer?.masksToBounds = true
     }
 
     private func drawBackground(in rect: NSRect) {
-        let backgroundPath = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
-        NSColor(calibratedWhite: 0.08, alpha: 0.62).setFill()
+        let backgroundPath = NSBezierPath(
+            roundedRect: rect,
+            xRadius: TempuraDesign.Radius.chart,
+            yRadius: TempuraDesign.Radius.chart
+        )
+        TempuraDesign.Color.chartBackground.setFill()
         backgroundPath.fill()
 
         NSColor.separatorColor.withAlphaComponent(0.26).setStroke()
@@ -98,7 +102,7 @@ final class ThermalChartView: NSView {
     }
 
     private func drawGrid(in rect: NSRect) {
-        NSColor.white.withAlphaComponent(0.08).setStroke()
+        TempuraDesign.Color.chartGrid.setStroke()
 
         for index in 0...2 {
             let y = rect.minY + (rect.height / 2) * CGFloat(index)
@@ -113,7 +117,7 @@ final class ThermalChartView: NSView {
     private func drawEmptyState(in rect: NSRect) {
         let text = "--°C"
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 20, weight: .medium),
+            .font: TempuraDesign.Font.chartEmpty,
             .foregroundColor: NSColor.disabledControlTextColor
         ]
         let size = text.size(withAttributes: attributes)
@@ -172,8 +176,8 @@ final class ThermalChartView: NSView {
         }
 
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .semibold),
-            .foregroundColor: NSColor(calibratedWhite: 0.86, alpha: 1)
+            .font: TempuraDesign.Font.chartAxis,
+            .foregroundColor: TempuraDesign.Color.chartAxisText
         ]
 
         let high = temperatureUnit.formatted(celsius: range.upperBound, includeUnit: false)
@@ -201,9 +205,13 @@ final class ThermalChartView: NSView {
             width: size.width + 4,
             height: size.height + 2
         )
-        let plate = NSBezierPath(roundedRect: labelRect, xRadius: 3.5, yRadius: 3.5)
+        let plate = NSBezierPath(
+            roundedRect: labelRect,
+            xRadius: TempuraDesign.Radius.axisPlate,
+            yRadius: TempuraDesign.Radius.axisPlate
+        )
 
-        NSColor(calibratedWhite: 0.12, alpha: 0.72).setFill()
+        TempuraDesign.Color.chartAxisPlate.setFill()
         plate.fill()
         NSColor.white.withAlphaComponent(0.08).setStroke()
         plate.lineWidth = 1
