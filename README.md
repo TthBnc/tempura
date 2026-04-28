@@ -15,9 +15,24 @@ Install from the DMG:
 1. Download `Tempura.dmg` from the release page.
 2. Open the DMG.
 3. Drag `Tempura.app` onto the `Applications` shortcut.
-4. Launch Tempura from Applications or Spotlight.
+4. Remove the macOS quarantine flag (see below), then launch Tempura from Applications or Spotlight.
 
-Tempura is currently ad-hoc signed, not notarized with Apple Developer ID, so macOS may ask you to confirm before opening it.
+### First-launch on macOS
+
+Tempura is ad-hoc signed while I wait on my Apple Developer ID. Once that's set up, releases will be properly signed and notarized and this step will go away. Until then, macOS Gatekeeper will block the first launch with:
+
+> "Tempura" can't be opened because Apple cannot check it for malicious software.
+
+To allow it, run this once after dragging the app to Applications:
+
+```sh
+xattr -cr /Applications/Tempura.app
+```
+
+Then open Tempura normally. macOS will remember the choice — you only need to do this once per install.
+
+Alternatively, you can right-click Tempura.app in Applications, choose Open, and confirm the warning dialog. Some macOS versions (notably Sequoia and later) no longer offer this
+fallback, in which case use the xattr command above.
 
 ## Compatibility
 
