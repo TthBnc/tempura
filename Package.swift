@@ -21,6 +21,9 @@ let package = Package(
             targets: ["TempuraProbe"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.1")
+    ],
     targets: [
         .target(
             name: "TempuraCore",
@@ -30,7 +33,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "TempuraApp",
-            dependencies: ["TempuraCore"]
+            dependencies: [
+                "TempuraCore",
+                .product(name: "Sparkle", package: "Sparkle")
+            ]
         ),
         .executableTarget(
             name: "TempuraProbe",

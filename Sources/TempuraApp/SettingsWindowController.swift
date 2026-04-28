@@ -2,8 +2,8 @@ import AppKit
 
 @MainActor
 final class SettingsWindowController: NSWindowController {
-    init() {
-        let viewController = SettingsViewController()
+    init(checkForUpdates: @escaping @MainActor () -> Void) {
+        let viewController = SettingsViewController(checkForUpdates: checkForUpdates)
         let window = NSWindow(contentViewController: viewController)
         window.title = "General"
         window.styleMask = [.titled, .closable, .miniaturizable]
@@ -41,6 +41,7 @@ final class SettingsWindowController: NSWindowController {
 
 @MainActor
 private final class SettingsViewController: NSViewController {
+    private let checkForUpdatesAction: @MainActor () -> Void
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Start at Login", target: nil, action: nil)
     private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
     private let menuBarTemperatureCheckbox = NSButton(checkboxWithTitle: "Temperature", target: nil, action: nil)
@@ -61,6 +62,16 @@ private final class SettingsViewController: NSViewController {
     private let versionLabel = NSTextField(labelWithString: "")
     private let updateButton = NSButton(title: "Check for Updates", target: nil, action: nil)
     private let quitButton = NSButton(title: "Quit Tempura", target: NSApp, action: #selector(NSApplication.terminate(_:)))
+
+    init(checkForUpdates: @escaping @MainActor () -> Void) {
+        self.checkForUpdatesAction = checkForUpdates
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
 
     override func loadView() {
         let visualEffectView = NSVisualEffectView(
@@ -214,11 +225,11 @@ private final class SettingsViewController: NSViewController {
         TempuraDesign.styleActionButton(updateButton)
         updateButton.controlSize = .regular
         updateButton.font = TempuraDesign.Font.buttonStrong
-        updateButton.toolTip = "Open the Tempura releases page"
+        updateButton.toolTip = "Check for Tempura updates"
         updateButton.target = self
         updateButton.action = #selector(checkForUpdates(_:))
         updateButton.setAccessibilityLabel("Check for Updates")
-        updateButton.setAccessibilityHelp("Opens the latest Tempura release page in your browser.")
+        updateButton.setAccessibilityHelp("Checks for Tempura updates only when requested.")
 
         TempuraDesign.styleActionButton(quitButton)
         quitButton.controlSize = .regular
@@ -258,7 +269,7 @@ private final class SettingsViewController: NSViewController {
 
     private func makeUpdateRow() -> NSStackView {
         let titleLabel = makeTitleLabel("Manual Updates")
-        let helpLabel = makeHelpLabel("Opens the latest GitHub release page only when you click the button.")
+        let helpLabel = makeHelpLabel("Tempura checks for updates only when you click the button.")
 
         let textStack = NSStackView(views: [titleLabel, helpLabel])
         textStack.orientation = .vertical
@@ -444,11 +455,7 @@ private final class SettingsViewController: NSViewController {
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {
-        guard let url = URL(string: "https://github.com/TthBnc/tempura/releases/latest") else {
-            return
-        }
-
-        NSWorkspace.shared.open(url)
+        checkForUpdatesAction()
     }
 
     private func showLaunchAtLoginError(_ error: Error) {

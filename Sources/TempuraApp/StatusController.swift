@@ -9,7 +9,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private let quitMenu = NSMenu()
     private let panelViewController = ThermalPanelViewController()
     private let popover = NSPopover()
-    private let settingsWindowController = SettingsWindowController()
+    private let settingsWindowController: SettingsWindowController
 
     private var timer: Timer?
     private var readInFlight = false
@@ -22,9 +22,10 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var temperatureUnit = TemperatureUnit.current
     private var menuBarSettings = MenuBarDisplaySettings.current
 
-    init(provider: any TemperatureReadingProvider) {
+    init(provider: any TemperatureReadingProvider, checkForUpdates: @escaping @MainActor () -> Void) {
         self.provider = provider
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        self.settingsWindowController = SettingsWindowController(checkForUpdates: checkForUpdates)
 
         super.init()
 

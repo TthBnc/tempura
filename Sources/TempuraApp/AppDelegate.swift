@@ -4,6 +4,7 @@ import TempuraCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusController: StatusController?
+    private var updateController: UpdateController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let provider: any TemperatureReadingProvider
@@ -17,6 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             provider = UnavailableTemperatureProvider()
         }
 
-        statusController = StatusController(provider: provider)
+        let updateController = UpdateController()
+        self.updateController = updateController
+
+        statusController = StatusController(
+            provider: provider,
+            checkForUpdates: { [weak updateController] in
+                updateController?.checkForUpdates(nil)
+            }
+        )
     }
 }
