@@ -21,7 +21,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
     init(provider: any TemperatureReadingProvider) {
         self.provider = provider
-        self.statusItem = NSStatusBar.system.statusItem(withLength: 48)
+        self.statusItem = NSStatusBar.system.statusItem(withLength: 54)
 
         super.init()
 
@@ -244,7 +244,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     }
 
     private func attributedTitle(for state: DisplayState) -> NSAttributedString {
-        let font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 13.5, weight: .semibold)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
 
