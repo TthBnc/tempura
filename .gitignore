@@ -3,6 +3,7 @@
 DerivedData/
 Tempura.app/
 dist/*.dmg
+dist/*.xml
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 *.xcuserstate

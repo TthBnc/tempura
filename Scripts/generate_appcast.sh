@@ -31,7 +31,7 @@ cp "$DMG_PATH" "$UPDATE_DIR/Tempura.dmg"
     --download-url-prefix "https://github.com/TthBnc/tempura/releases/download/v$VERSION/" \
     --full-release-notes-url "https://github.com/TthBnc/tempura/releases/tag/v$VERSION" \
     --link "https://github.com/TthBnc/tempura" \
-    -o "$APPCAST_NAME" \
+    -o "$UPDATE_DIR/$APPCAST_NAME" \
     "$UPDATE_DIR" >/dev/null
 
 cp "$UPDATE_DIR/$APPCAST_NAME" "$APPCAST_PATH"
