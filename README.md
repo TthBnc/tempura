@@ -8,7 +8,7 @@ Tempura is a native macOS menu bar utility that shows one representative hardwar
 
 Download the latest release:
 
-[Tempura 0.4.0](https://github.com/TthBnc/tempura/releases/tag/v0.4.0)
+[Tempura 0.5.0](https://github.com/TthBnc/tempura/releases/tag/v0.5.0)
 
 Install from the DMG:
 
@@ -48,10 +48,10 @@ Tempura requires macOS 13 Ventura or newer.
 - Shows memory usage, swap overflow, and thermal throttle risk in the panel.
 - Uses native Liquid Glass surfaces on macOS 26 and a compatible glass fallback on macOS 13-25.
 - Can open automatically when you log in.
-- Shows version details and opens the latest release page from a separate settings window when requested.
+- Shows version details and checks for updates from a separate settings window only when requested.
 - Provides a `Quit Tempura` button in the panel.
 - Prevents duplicate app instances.
-- Stays local-only while monitoring: no background network calls, telemetry, fan control, or SMC writes.
+- Stays local-only while monitoring: no background network calls, telemetry, fan control, or SMC writes. Manual update checks contact GitHub Releases only when you click `Check for Updates`.
 
 ## Build From Source
 
