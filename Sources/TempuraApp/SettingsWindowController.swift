@@ -211,7 +211,7 @@ private final class SettingsViewController: NSViewController {
         versionLabel.font = TempuraDesign.Font.settingsVersion
         versionLabel.textColor = .secondaryLabelColor
 
-        updateButton.bezelStyle = .rounded
+        TempuraDesign.styleActionButton(updateButton)
         updateButton.controlSize = .regular
         updateButton.font = TempuraDesign.Font.buttonStrong
         updateButton.toolTip = "Open the Tempura releases page"
@@ -220,7 +220,7 @@ private final class SettingsViewController: NSViewController {
         updateButton.setAccessibilityLabel("Check for Updates")
         updateButton.setAccessibilityHelp("Opens the latest Tempura release page in your browser.")
 
-        quitButton.bezelStyle = .rounded
+        TempuraDesign.styleActionButton(quitButton)
         quitButton.controlSize = .regular
         quitButton.font = TempuraDesign.Font.buttonStrong
         quitButton.setAccessibilityLabel("Quit Tempura")

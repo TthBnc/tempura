@@ -148,7 +148,7 @@ final class ThermalPanelViewController: NSViewController {
     ) {
         button.title = title
         button.image = nil
-        button.bezelStyle = .rounded
+        TempuraDesign.styleActionButton(button)
         button.controlSize = .regular
         button.font = weight == .medium ? TempuraDesign.Font.buttonStrong : TempuraDesign.Font.button
         button.target = target ?? self

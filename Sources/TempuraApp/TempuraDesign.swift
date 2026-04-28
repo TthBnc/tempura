@@ -113,6 +113,15 @@ enum TempuraDesign {
     static func isDarkAppearance(_ appearance: NSAppearance) -> Bool {
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
     }
+
+    @MainActor
+    static func styleActionButton(_ button: NSButton) {
+        if #available(macOS 26.0, *) {
+            button.bezelStyle = .glass
+        } else {
+            button.bezelStyle = .rounded
+        }
+    }
 }
 
 struct TempuraGlassPalette {
@@ -121,94 +130,201 @@ struct TempuraGlassPalette {
     let topHighlight: NSColor
 }
 
-final class TempuraGlassBackdropView: NSVisualEffectView {
+final class TempuraGlassBackdropView: NSView {
     let contentView = NSView()
 
+    private let fallbackEffectView = NSVisualEffectView()
     private let topHighlightView = NSView()
+    private var usesNativeGlass = false
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         configureSurface()
         configureChrome()
-        applyGlassPalette()
+        if !usesNativeGlass {
+            applyGlassPalette()
+        }
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         configureSurface()
         configureChrome()
-        applyGlassPalette()
+        if !usesNativeGlass {
+            applyGlassPalette()
+        }
     }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        applyGlassPalette()
+        if !usesNativeGlass {
+            applyGlassPalette()
+        }
     }
 
     private func configureSurface() {
-        material = .popover
-        blendingMode = .behindWindow
-        state = .active
         wantsLayer = true
-        layer?.cornerRadius = TempuraDesign.Radius.shell
-        layer?.cornerCurve = .continuous
-        layer?.masksToBounds = true
+
+        if #available(macOS 26.0, *) {
+            configureNativeGlassSurface()
+        } else {
+            configureFallbackSurface()
+        }
     }
 
     private func configureChrome() {
+        guard !usesNativeGlass else {
+            return
+        }
+
         [contentView, topHighlightView].forEach { chromeView in
             chromeView.translatesAutoresizingMaskIntoConstraints = false
             chromeView.wantsLayer = true
-            addSubview(chromeView)
         }
 
+        fallbackEffectView.addSubview(contentView)
+        fallbackEffectView.addSubview(topHighlightView)
         topHighlightView.layer?.cornerRadius = 0.5
 
         NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            contentView.topAnchor.constraint(equalTo: topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentView.leadingAnchor.constraint(equalTo: fallbackEffectView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: fallbackEffectView.trailingAnchor),
+            contentView.topAnchor.constraint(equalTo: fallbackEffectView.topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: fallbackEffectView.bottomAnchor),
 
-            topHighlightView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: TempuraDesign.Layout.panelInset),
-            topHighlightView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -TempuraDesign.Layout.panelInset),
-            topHighlightView.topAnchor.constraint(equalTo: topAnchor),
+            topHighlightView.leadingAnchor.constraint(equalTo: fallbackEffectView.leadingAnchor, constant: TempuraDesign.Layout.panelInset),
+            topHighlightView.trailingAnchor.constraint(equalTo: fallbackEffectView.trailingAnchor, constant: -TempuraDesign.Layout.panelInset),
+            topHighlightView.topAnchor.constraint(equalTo: fallbackEffectView.topAnchor),
             topHighlightView.heightAnchor.constraint(equalToConstant: 1)
+        ])
+    }
+
+    @available(macOS 26.0, *)
+    private func configureNativeGlassSurface() {
+        usesNativeGlass = true
+
+        let containerView = NSGlassEffectContainerView()
+        let glassView = NSGlassEffectView()
+
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        glassView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+
+        containerView.spacing = 14
+        glassView.style = .regular
+        glassView.cornerRadius = TempuraDesign.Radius.shell
+        glassView.contentView = contentView
+        containerView.contentView = glassView
+
+        addSubview(containerView)
+
+        NSLayoutConstraint.activate([
+            containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            containerView.topAnchor.constraint(equalTo: topAnchor),
+            containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            glassView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            glassView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            glassView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            glassView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+
+            contentView.leadingAnchor.constraint(equalTo: glassView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: glassView.trailingAnchor),
+            contentView.topAnchor.constraint(equalTo: glassView.topAnchor),
+            contentView.bottomAnchor.constraint(equalTo: glassView.bottomAnchor)
+        ])
+    }
+
+    private func configureFallbackSurface() {
+        fallbackEffectView.material = .popover
+        fallbackEffectView.blendingMode = .behindWindow
+        fallbackEffectView.state = .active
+        fallbackEffectView.wantsLayer = true
+        fallbackEffectView.layer?.cornerRadius = TempuraDesign.Radius.shell
+        fallbackEffectView.layer?.cornerCurve = .continuous
+        fallbackEffectView.layer?.masksToBounds = true
+        fallbackEffectView.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(fallbackEffectView)
+
+        NSLayoutConstraint.activate([
+            fallbackEffectView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            fallbackEffectView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            fallbackEffectView.topAnchor.constraint(equalTo: topAnchor),
+            fallbackEffectView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
 
     private func applyGlassPalette() {
         let palette = TempuraDesign.Color.shellPalette(isDark: TempuraDesign.isDarkAppearance(effectiveAppearance))
-        layer?.backgroundColor = palette.fill.cgColor
-        layer?.borderColor = palette.stroke.cgColor
-        layer?.borderWidth = 1
+        fallbackEffectView.layer?.backgroundColor = palette.fill.cgColor
+        fallbackEffectView.layer?.borderColor = palette.stroke.cgColor
+        fallbackEffectView.layer?.borderWidth = 1
         topHighlightView.layer?.backgroundColor = palette.topHighlight.cgColor
     }
 }
 
 class TempuraGlassCardView: NSView {
+    private var nativeGlassView: NSView?
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         configureSurface()
-        applyGlassPalette()
+        if nativeGlassView == nil {
+            applyGlassPalette()
+        }
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         configureSurface()
-        applyGlassPalette()
+        if nativeGlassView == nil {
+            applyGlassPalette()
+        }
     }
 
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        applyGlassPalette()
+        if nativeGlassView == nil {
+            applyGlassPalette()
+        }
     }
 
     private func configureSurface() {
         wantsLayer = true
-        layer?.cornerRadius = TempuraDesign.Radius.card
         layer?.cornerCurve = .continuous
+
+        if #available(macOS 26.0, *) {
+            configureNativeGlassSurface()
+        } else {
+            configureFallbackSurface()
+        }
+    }
+
+    @available(macOS 26.0, *)
+    private func configureNativeGlassSurface() {
+        let glassView = NSGlassEffectView()
+        glassView.translatesAutoresizingMaskIntoConstraints = false
+        glassView.style = .regular
+        glassView.cornerRadius = TempuraDesign.Radius.card
+        glassView.contentView = NSView()
+        nativeGlassView = glassView
+
+        addSubview(glassView, positioned: .below, relativeTo: nil)
+
+        NSLayoutConstraint.activate([
+            glassView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            glassView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            glassView.topAnchor.constraint(equalTo: topAnchor),
+            glassView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+    }
+
+    private func configureFallbackSurface() {
+        layer?.cornerRadius = TempuraDesign.Radius.card
         layer?.borderWidth = 1
+        applyGlassPalette()
     }
 
     private func applyGlassPalette() {
