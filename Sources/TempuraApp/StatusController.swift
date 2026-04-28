@@ -16,6 +16,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var lastDisplayState: DisplayState?
     private var currentReading: TemperatureReading?
     private var currentThrottleStatus = ThrottleStatus.unavailable
+    private var currentMemoryStatus = MemoryUsageStatus.unavailable
     private var history = TemperatureHistory(retention: 60)
     private var localDismissMonitor: Any?
     private var globalDismissMonitor: Any?
@@ -132,7 +133,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         panelViewController.update(
             samples: history.samples,
             currentReading: currentReading,
-            throttleStatus: currentThrottleStatus
+            throttleStatus: currentThrottleStatus,
+            memoryStatus: currentMemoryStatus
         )
     }
 
@@ -152,7 +154,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         panelViewController.update(
             samples: history.samples,
             currentReading: currentReading,
-            throttleStatus: currentThrottleStatus
+            throttleStatus: currentThrottleStatus,
+            memoryStatus: currentMemoryStatus
         )
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         button.highlight(true)
@@ -252,11 +255,13 @@ final class StatusController: NSObject, NSPopoverDelegate {
             let reading = provider.readCurrentTemperature()
             let pressure = SystemThermalPressure.current
             let thermalLimit = ThermalLimitReader.readCurrent()
+            let memoryStatus = MemoryUsageReader.readCurrent()
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.readInFlight = false
                 self.currentReading = reading
                 self.history.record(reading)
+                self.currentMemoryStatus = memoryStatus
                 self.currentThrottleStatus = ThrottleStatus(
                     reading: reading,
                     samples: self.history.samples,
@@ -267,7 +272,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
                 self.panelViewController.update(
                     samples: self.history.samples,
                     currentReading: reading,
-                    throttleStatus: self.currentThrottleStatus
+                    throttleStatus: self.currentThrottleStatus,
+                    memoryStatus: self.currentMemoryStatus
                 )
             }
         }

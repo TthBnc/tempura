@@ -3,7 +3,7 @@ import TempuraCore
 
 @MainActor
 final class ThermalPanelViewController: NSViewController {
-    static let preferredContentSize = NSSize(width: 300, height: 338)
+    static let preferredContentSize = NSSize(width: 300, height: 418)
 
     var settingsRequested: (() -> Void)?
 
@@ -11,6 +11,7 @@ final class ThermalPanelViewController: NSViewController {
     private let sourceLabel = NSTextField(labelWithString: "No reading")
     private let chartView = ThermalChartView()
     private let throttleView = ThrottleRiskView()
+    private let memoryView = MemoryUsageView()
     private let settingsButton = NSButton()
     private let quitButton = NSButton()
     private var temperatureUnit = TemperatureUnit.current
@@ -51,6 +52,7 @@ final class ThermalPanelViewController: NSViewController {
             valueStack,
             chartView,
             throttleView,
+            memoryView,
             separator,
             actionStack
         ])
@@ -74,6 +76,8 @@ final class ThermalPanelViewController: NSViewController {
             chartView.heightAnchor.constraint(equalToConstant: 112),
             throttleView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
             throttleView.heightAnchor.constraint(equalToConstant: 54),
+            memoryView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
+            memoryView.heightAnchor.constraint(equalToConstant: 70),
             separator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28),
             actionStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -28)
         ])
@@ -87,7 +91,8 @@ final class ThermalPanelViewController: NSViewController {
     func update(
         samples: [TemperatureSample],
         currentReading: TemperatureReading?,
-        throttleStatus: ThrottleStatus
+        throttleStatus: ThrottleStatus,
+        memoryStatus: MemoryUsageStatus
     ) {
         let displayState = DisplayState(reading: currentReading, unit: temperatureUnit)
         currentValueLabel.stringValue = displayState.title
@@ -102,6 +107,7 @@ final class ThermalPanelViewController: NSViewController {
 
         chartView.samples = samples
         throttleView.status = throttleStatus
+        memoryView.status = memoryStatus
     }
 
     private func configureLabels() {
@@ -302,6 +308,201 @@ private final class ThrottleRiskMeterView: NSView {
             yRadius: fillRect.height / 2
         )
         status.risk.tintColor.setFill()
+        fillPath.fill()
+    }
+}
+
+private final class MemoryUsageView: NSView {
+    var status = MemoryUsageStatus.unavailable {
+        didSet {
+            applyStatus()
+        }
+    }
+
+    private let captionLabel = NSTextField(labelWithString: "Memory")
+    private let memoryValueLabel = NSTextField(labelWithString: "--")
+    private let swapCaptionLabel = NSTextField(labelWithString: "Swap Overflow")
+    private let swapValueLabel = NSTextField(labelWithString: "--")
+    private let detailLabel = NSTextField(labelWithString: MemoryUsageStatus.unavailable.detail)
+    private let memoryMeterView = UsageMeterView()
+    private let swapMeterView = UsageMeterView()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        configureView()
+        configureLabels()
+        configureLayout()
+        applyStatus()
+        applyPalette()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        configureView()
+        configureLabels()
+        configureLayout()
+        applyStatus()
+        applyPalette()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyPalette()
+    }
+
+    private func configureView() {
+        wantsLayer = true
+        layer?.cornerRadius = 8
+        layer?.cornerCurve = .continuous
+    }
+
+    private func configureLabels() {
+        [captionLabel, swapCaptionLabel].forEach { label in
+            label.font = .systemFont(ofSize: 11, weight: .semibold)
+            label.textColor = .secondaryLabelColor
+        }
+
+        [memoryValueLabel, swapValueLabel].forEach { label in
+            label.font = .monospacedDigitSystemFont(ofSize: 12.5, weight: .semibold)
+            label.alignment = .right
+            label.lineBreakMode = .byClipping
+        }
+
+        detailLabel.font = .systemFont(ofSize: 10.5, weight: .regular)
+        detailLabel.textColor = .tertiaryLabelColor
+        detailLabel.lineBreakMode = .byTruncatingTail
+    }
+
+    private func configureLayout() {
+        let memoryStack = makeMetricStack(
+            titleLabel: captionLabel,
+            valueLabel: memoryValueLabel,
+            meterView: memoryMeterView
+        )
+        let swapStack = makeMetricStack(
+            titleLabel: swapCaptionLabel,
+            valueLabel: swapValueLabel,
+            meterView: swapMeterView
+        )
+
+        let meterStack = NSStackView(views: [memoryStack, swapStack])
+        meterStack.orientation = .horizontal
+        meterStack.alignment = .top
+        meterStack.spacing = 10
+        meterStack.distribution = .fillEqually
+
+        let stack = NSStackView(views: [meterStack, detailLabel])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 7
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            stack.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+
+            meterStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            detailLabel.widthAnchor.constraint(equalTo: stack.widthAnchor)
+        ])
+    }
+
+    private func makeMetricStack(
+        titleLabel: NSTextField,
+        valueLabel: NSTextField,
+        meterView: UsageMeterView
+    ) -> NSStackView {
+        let labelStack = NSStackView(views: [titleLabel, NSView(), valueLabel])
+        labelStack.orientation = .horizontal
+        labelStack.alignment = .centerY
+        labelStack.spacing = 6
+
+        let stack = NSStackView(views: [labelStack, meterView])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 5
+
+        NSLayoutConstraint.activate([
+            labelStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            meterView.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            meterView.heightAnchor.constraint(equalToConstant: 5)
+        ])
+
+        return stack
+    }
+
+    private func applyStatus() {
+        memoryValueLabel.stringValue = status.isAvailable ? status.memoryPercentTitle : "--"
+        memoryValueLabel.textColor = status.memoryLevel.tintColor
+
+        swapValueLabel.stringValue = status.isAvailable ? status.swapOverflowTitle : "--"
+        swapValueLabel.textColor = status.swapLevel.tintColor
+
+        detailLabel.stringValue = status.detail
+        memoryMeterView.progress = status.isAvailable ? CGFloat(status.memoryFraction) : 0.08
+        memoryMeterView.tintColor = status.memoryLevel.tintColor
+        swapMeterView.progress = status.isAvailable ? CGFloat(status.swapOverflowFraction) : 0.08
+        swapMeterView.tintColor = status.swapLevel.tintColor
+    }
+
+    private func applyPalette() {
+        let fillAlpha: CGFloat = isDarkAppearance ? 0.18 : 0.24
+        layer?.backgroundColor = NSColor.controlBackgroundColor
+            .withAlphaComponent(fillAlpha)
+            .cgColor
+    }
+
+    private var isDarkAppearance: Bool {
+        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+    }
+}
+
+private final class UsageMeterView: NSView {
+    var progress: CGFloat = 0 {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
+    var tintColor: NSColor = .disabledControlTextColor {
+        didSet {
+            needsDisplay = true
+        }
+    }
+
+    override var isFlipped: Bool {
+        true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let trackRect = bounds.insetBy(dx: 0, dy: 0.5)
+        let trackPath = NSBezierPath(
+            roundedRect: trackRect,
+            xRadius: trackRect.height / 2,
+            yRadius: trackRect.height / 2
+        )
+        NSColor.separatorColor.withAlphaComponent(0.28).setFill()
+        trackPath.fill()
+
+        let clampedProgress = min(max(progress, 0), 1)
+        let fillWidth = max(trackRect.width * clampedProgress, trackRect.height)
+        let fillRect = NSRect(
+            x: trackRect.minX,
+            y: trackRect.minY,
+            width: fillWidth,
+            height: trackRect.height
+        )
+        let fillPath = NSBezierPath(
+            roundedRect: fillRect,
+            xRadius: fillRect.height / 2,
+            yRadius: fillRect.height / 2
+        )
+        tintColor.setFill()
         fillPath.fill()
     }
 }
