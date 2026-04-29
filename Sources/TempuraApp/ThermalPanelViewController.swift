@@ -9,7 +9,6 @@ final class ThermalPanelViewController: NSViewController {
     )
 
     var settingsRequested: (() -> Void)?
-    var contentSizeDidChange: ((NSSize) -> Void)?
 
     private let currentValueLabel = NSTextField(labelWithString: "--°C")
     private let sourceLabel = NSTextField(labelWithString: "No reading")
@@ -115,7 +114,7 @@ final class ThermalPanelViewController: NSViewController {
             actionStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset)
         ])
 
-        updateDetailsMode(.none, notify: false)
+        updateDetailsMode(.none)
     }
 
     func setTemperatureUnit(_ unit: TemperatureUnit) {
@@ -258,9 +257,8 @@ final class ThermalPanelViewController: NSViewController {
         return row
     }
 
-    private func updateDetailsMode(_ mode: TelemetryDetailsMode, notify: Bool = true) {
+    private func updateDetailsMode(_ mode: TelemetryDetailsMode) {
         detailsMode = mode
-        telemetryDetailsView.isHidden = mode == .none
         telemetryDetailsView.update(
             mode: mode,
             reading: currentReading,
@@ -271,18 +269,6 @@ final class ThermalPanelViewController: NSViewController {
 
         for (index, selectableMode) in TelemetryDetailsMode.selectableCases.enumerated() {
             detailsControl.setSelected(mode == selectableMode, forSegment: index)
-        }
-
-        let nextSize = NSSize(
-            width: TempuraDesign.Layout.panelWidth,
-            height: mode == .none
-                ? TempuraDesign.Layout.panelHeight
-                : TempuraDesign.Layout.panelExpandedHeight
-        )
-        preferredContentSize = nextSize
-
-        if notify {
-            contentSizeDidChange?(nextSize)
         }
     }
 
@@ -366,12 +352,19 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
         memoryStatus: MemoryUsageStatus,
         temperatureUnit: TemperatureUnit
     ) {
-        titleLabel.stringValue = mode == .memory ? "Memory Breakdown" : "Thermal Detail"
+        switch mode {
+        case .none:
+            titleLabel.stringValue = "Details"
+        case .thermal:
+            titleLabel.stringValue = "Thermal Detail"
+        case .memory:
+            titleLabel.stringValue = "Memory Breakdown"
+        }
 
         let rows: [TelemetryDetailRow]
         switch mode {
         case .none:
-            rows = []
+            rows = emptyRows()
         case .thermal:
             rows = thermalRows(reading: reading, stats: stats, unit: temperatureUnit)
         case .memory:
@@ -500,6 +493,17 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
                 value: stats.map { "\($0.sampleCount)" } ?? "--",
                 tintColor: .labelColor
             )
+        ]
+    }
+
+    private func emptyRows() -> [TelemetryDetailRow] {
+        [
+            TelemetryDetailRow(title: "Thermal", value: "sensor view", tintColor: .tertiaryLabelColor),
+            TelemetryDetailRow(title: "Memory", value: "breakdown", tintColor: .tertiaryLabelColor),
+            TelemetryDetailRow(title: "Window", value: "live", tintColor: .tertiaryLabelColor),
+            TelemetryDetailRow(title: "Select", value: "above", tintColor: .tertiaryLabelColor),
+            TelemetryDetailRow(title: "State", value: "idle", tintColor: .tertiaryLabelColor),
+            TelemetryDetailRow(title: "Update", value: "5s", tintColor: .tertiaryLabelColor)
         ]
     }
 

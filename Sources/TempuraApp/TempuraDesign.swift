@@ -34,8 +34,7 @@ enum TempuraDesign {
 
     enum Layout {
         static let panelWidth: CGFloat = 360
-        static let panelHeight: CGFloat = 484
-        static let panelExpandedHeight: CGFloat = 630
+        static let panelHeight: CGFloat = 630
         static let panelInset: CGFloat = 14
         static let panelContentInset: CGFloat = panelInset * 2
         static let panelSpacing: CGFloat = 10

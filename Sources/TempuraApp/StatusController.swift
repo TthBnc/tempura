@@ -124,15 +124,6 @@ final class StatusController: NSObject, NSPopoverDelegate {
             self.closePanel()
             self.settingsWindowController.showSettingsWindow()
         }
-        panelViewController.contentSizeDidChange = { [weak self] size in
-            guard let self else {
-                return
-            }
-
-            self.popover.contentSize = size
-            self.popover.contentViewController?.preferredContentSize = size
-            self.popover.contentViewController?.view.needsLayout = true
-        }
         panelViewController.setTemperatureUnit(temperatureUnit)
         panelViewController.setHistoryWindow(historyWindow)
     }
