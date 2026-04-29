@@ -13,6 +13,7 @@ final class ThermalPanelViewController: NSViewController {
     private let currentValueLabel = NSTextField(labelWithString: "--°C")
     private let sourceLabel = NSTextField(labelWithString: "No reading")
     private let chartView = ThermalChartView()
+    private let temperatureStatsView = TemperatureStatsStripView()
     private let systemPressureView = SystemPressureView()
     private let settingsButton = NSButton()
     private let quitButton = NSButton()
@@ -53,6 +54,7 @@ final class ThermalPanelViewController: NSViewController {
             headerStack,
             valueStack,
             chartView,
+            temperatureStatsView,
             systemPressureView,
             separator,
             actionStack
@@ -80,6 +82,8 @@ final class ThermalPanelViewController: NSViewController {
             valueStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             chartView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             chartView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.chartHeight),
+            temperatureStatsView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
+            temperatureStatsView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.temperatureStatsHeight),
             systemPressureView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             systemPressureView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.systemPressureHeight),
             separator.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
@@ -90,10 +94,12 @@ final class ThermalPanelViewController: NSViewController {
     func setTemperatureUnit(_ unit: TemperatureUnit) {
         temperatureUnit = unit
         chartView.temperatureUnit = unit
+        temperatureStatsView.temperatureUnit = unit
     }
 
     func update(
         samples: [TemperatureSample],
+        temperatureStats: TemperatureHistoryStats?,
         currentReading: TemperatureReading?,
         throttleStatus: ThrottleStatus,
         memoryStatus: MemoryUsageStatus
@@ -110,6 +116,7 @@ final class ThermalPanelViewController: NSViewController {
         }
 
         chartView.samples = samples
+        temperatureStatsView.update(stats: temperatureStats)
         systemPressureView.update(throttleStatus: throttleStatus, memoryStatus: memoryStatus)
     }
 
@@ -175,6 +182,108 @@ final class ThermalPanelViewController: NSViewController {
     }
 }
 
+private final class TemperatureStatsStripView: NSView {
+    var temperatureUnit = TemperatureUnit.current {
+        didSet {
+            render()
+        }
+    }
+
+    private let averageValueLabel = NSTextField(labelWithString: "--")
+    private let peakValueLabel = NSTextField(labelWithString: "--")
+    private let lowValueLabel = NSTextField(labelWithString: "--")
+    private var stats: TemperatureHistoryStats?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        configureLayout()
+        render()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        configureLayout()
+        render()
+    }
+
+    func update(stats: TemperatureHistoryStats?) {
+        self.stats = stats
+        render()
+    }
+
+    private func configureLayout() {
+        let stack = NSStackView(views: [
+            makeMetric(title: "Avg", valueLabel: averageValueLabel),
+            makeMetric(title: "Peak", valueLabel: peakValueLabel),
+            makeMetric(title: "Low", valueLabel: lowValueLabel)
+        ])
+        stack.orientation = .horizontal
+        stack.alignment = .centerY
+        stack.distribution = .fillEqually
+        stack.spacing = 10
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2),
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityLabel("Temperature summary")
+    }
+
+    private func makeMetric(title: String, valueLabel: NSTextField) -> NSStackView {
+        let captionLabel = NSTextField(labelWithString: title)
+        captionLabel.font = TempuraDesign.Font.statCaption
+        captionLabel.textColor = .secondaryLabelColor
+
+        valueLabel.font = TempuraDesign.Font.statValue
+        valueLabel.textColor = .labelColor
+        valueLabel.alignment = .right
+        valueLabel.lineBreakMode = .byClipping
+
+        let stack = NSStackView(views: [captionLabel, NSView(), valueLabel])
+        stack.orientation = .horizontal
+        stack.alignment = .firstBaseline
+        stack.spacing = 6
+
+        NSLayoutConstraint.activate([
+            valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 34)
+        ])
+
+        return stack
+    }
+
+    private func render() {
+        guard let stats else {
+            [averageValueLabel, peakValueLabel, lowValueLabel].forEach { label in
+                label.stringValue = "--"
+                label.textColor = .tertiaryLabelColor
+            }
+            setAccessibilityValue("No temperature summary yet")
+            return
+        }
+
+        averageValueLabel.stringValue = temperatureUnit.formatted(celsius: stats.averageCelsius, includeUnit: false)
+        peakValueLabel.stringValue = temperatureUnit.formatted(celsius: stats.peakCelsius, includeUnit: false)
+        lowValueLabel.stringValue = temperatureUnit.formatted(celsius: stats.lowCelsius, includeUnit: false)
+
+        averageValueLabel.textColor = TemperatureBucket(celsius: stats.averageCelsius).chartColor
+        peakValueLabel.textColor = TemperatureBucket(celsius: stats.peakCelsius).chartColor
+        lowValueLabel.textColor = .labelColor
+
+        setAccessibilityValue(
+            "Average \(temperatureUnit.formatted(celsius: stats.averageCelsius)), " +
+                "peak \(temperatureUnit.formatted(celsius: stats.peakCelsius)), " +
+                "low \(temperatureUnit.formatted(celsius: stats.lowCelsius))"
+        )
+    }
+}
+
 private final class SystemPressureView: TempuraGlassCardView {
     private let captionLabel = NSTextField(labelWithString: "System Pressure")
     private let riskLabel = NSTextField(labelWithString: ThrottleRisk.unavailable.title)
@@ -183,7 +292,10 @@ private final class SystemPressureView: TempuraGlassCardView {
     private let memoryCaptionLabel = NSTextField(labelWithString: "Memory")
     private let memoryValueLabel = NSTextField(labelWithString: "--")
     private let memoryMeterView = TempuraMeterView()
-    private let swapCaptionLabel = NSTextField(labelWithString: "Swap Overflow")
+    private let pressureCaptionLabel = NSTextField(labelWithString: "Pressure")
+    private let pressureValueLabel = NSTextField(labelWithString: "--")
+    private let pressureMeterView = TempuraMeterView()
+    private let swapCaptionLabel = NSTextField(labelWithString: "Swap")
     private let swapValueLabel = NSTextField(labelWithString: "--")
     private let swapMeterView = TempuraMeterView()
 
@@ -215,6 +327,11 @@ private final class SystemPressureView: TempuraGlassCardView {
         memoryMeterView.progress = memoryStatus.isAvailable ? CGFloat(memoryStatus.memoryFraction) : 0.08
         memoryMeterView.tintColor = memoryStatus.memoryLevel.tintColor
 
+        pressureValueLabel.stringValue = memoryStatus.pressureLevel.compactTitle
+        pressureValueLabel.textColor = memoryStatus.pressureLevel.tintColor
+        pressureMeterView.progress = CGFloat(memoryStatus.pressureLevel.progress)
+        pressureMeterView.tintColor = memoryStatus.pressureLevel.tintColor
+
         swapValueLabel.stringValue = memoryStatus.isAvailable ? memoryStatus.swapOverflowTitle : "--"
         swapValueLabel.textColor = memoryStatus.swapLevel.tintColor
         swapMeterView.progress = memoryStatus.isAvailable ? CGFloat(memoryStatus.swapOverflowFraction) : 0.08
@@ -224,7 +341,7 @@ private final class SystemPressureView: TempuraGlassCardView {
     }
 
     private func configureLabels() {
-        [captionLabel, memoryCaptionLabel, swapCaptionLabel].forEach { label in
+        [captionLabel, memoryCaptionLabel, pressureCaptionLabel, swapCaptionLabel].forEach { label in
             label.font = TempuraDesign.Font.cardCaption
             label.textColor = .secondaryLabelColor
         }
@@ -233,7 +350,7 @@ private final class SystemPressureView: TempuraGlassCardView {
         riskLabel.alignment = .right
         riskLabel.lineBreakMode = .byTruncatingTail
 
-        [memoryValueLabel, swapValueLabel].forEach { label in
+        [memoryValueLabel, pressureValueLabel, swapValueLabel].forEach { label in
             label.font = TempuraDesign.Font.cardValueSmall
             label.alignment = .right
             label.lineBreakMode = .byClipping
@@ -260,16 +377,21 @@ private final class SystemPressureView: TempuraGlassCardView {
             valueLabel: memoryValueLabel,
             meterView: memoryMeterView
         )
+        let pressureStack = makeMetricStack(
+            titleLabel: pressureCaptionLabel,
+            valueLabel: pressureValueLabel,
+            meterView: pressureMeterView
+        )
         let swapStack = makeMetricStack(
             titleLabel: swapCaptionLabel,
             valueLabel: swapValueLabel,
             meterView: swapMeterView
         )
 
-        let resourceStack = NSStackView(views: [memoryStack, swapStack])
+        let resourceStack = NSStackView(views: [memoryStack, pressureStack, swapStack])
         resourceStack.orientation = .horizontal
         resourceStack.alignment = .top
-        resourceStack.spacing = 10
+        resourceStack.spacing = 8
         resourceStack.distribution = .fillEqually
 
         let stack = NSStackView(views: [throttleStack, resourceStack])
@@ -336,6 +458,7 @@ private final class SystemPressureView: TempuraGlassCardView {
 
         if memoryStatus.isAvailable {
             parts.append("Memory \(memoryStatus.memoryPercentTitle)")
+            parts.append("Native memory pressure \(memoryStatus.pressureLevel.title)")
             parts.append("Swap overflow \(memoryStatus.swapOverflowTitle)")
             parts.append(memoryStatus.detail)
         } else {

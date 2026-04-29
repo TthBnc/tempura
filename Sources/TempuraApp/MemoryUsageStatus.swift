@@ -53,6 +53,19 @@ enum NativeMemoryPressureLevel: Int, Equatable {
         }
     }
 
+    var compactTitle: String {
+        switch self {
+        case .unavailable:
+            return "--"
+        case .normal:
+            return "OK"
+        case .warning:
+            return "Warn"
+        case .critical:
+            return "Crit"
+        }
+    }
+
     var detailTitle: String {
         switch self {
         case .unavailable:

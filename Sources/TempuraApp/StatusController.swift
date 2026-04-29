@@ -21,6 +21,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var globalDismissMonitor: Any?
     private var temperatureUnit = TemperatureUnit.current
     private var menuBarSettings = MenuBarDisplaySettings.current
+    private var temperatureSourceMode = TemperatureSourcePreference.current
 
     init(provider: any TemperatureReadingProvider, checkForUpdates: @escaping @MainActor () -> Void) {
         self.provider = provider
@@ -34,6 +35,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         configurePopover()
         configureTemperatureUnitObserver()
         configureMenuBarSettingsObserver()
+        configureTemperatureSourceModeObserver()
         updateDisplay()
         readTemperature()
 
@@ -142,6 +144,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         updateDisplay()
         panelViewController.update(
             samples: history.samples,
+            temperatureStats: history.stats(),
             currentReading: currentReading,
             throttleStatus: currentThrottleStatus,
             memoryStatus: currentMemoryStatus
@@ -155,6 +158,35 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         menuBarSettings = settings
         updateDisplay()
+    }
+
+    private func configureTemperatureSourceModeObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(temperatureSourceModeDidChange(_:)),
+            name: .temperatureSourceModeDidChange,
+            object: nil
+        )
+    }
+
+    @objc private func temperatureSourceModeDidChange(_ notification: Notification) {
+        guard let sourceMode = notification.object as? TemperatureSourceMode else {
+            return
+        }
+
+        temperatureSourceMode = sourceMode
+        history = TemperatureHistory(retention: history.retention)
+        currentReading = nil
+        currentThrottleStatus = .unavailable
+        updateDisplay()
+        panelViewController.update(
+            samples: history.samples,
+            temperatureStats: history.stats(),
+            currentReading: currentReading,
+            throttleStatus: currentThrottleStatus,
+            memoryStatus: currentMemoryStatus
+        )
+        readTemperature()
     }
 
     private func togglePanel() {
@@ -174,6 +206,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         panelViewController.update(
             samples: history.samples,
+            temperatureStats: history.stats(),
             currentReading: currentReading,
             throttleStatus: currentThrottleStatus,
             memoryStatus: currentMemoryStatus
@@ -290,15 +323,21 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         readInFlight = true
         let provider = provider
+        let sourceMode = temperatureSourceMode
 
-        readQueue.async { [provider] in
-            let reading = provider.readCurrentTemperature()
+        readQueue.async { [provider, sourceMode] in
+            let reading = provider.readTemperature(sourceMode: sourceMode)
             let pressure = SystemThermalPressure.current
             let thermalLimit = ThermalLimitReader.readCurrent()
             let memoryStatus = MemoryUsageReader.readCurrent()
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.readInFlight = false
+                guard sourceMode == self.temperatureSourceMode else {
+                    self.readTemperature()
+                    return
+                }
+
                 self.currentReading = reading
                 self.history.record(reading)
                 self.currentMemoryStatus = memoryStatus
@@ -311,6 +350,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
                 self.updateDisplay()
                 self.panelViewController.update(
                     samples: self.history.samples,
+                    temperatureStats: self.history.stats(),
                     currentReading: reading,
                     throttleStatus: self.currentThrottleStatus,
                     memoryStatus: self.currentMemoryStatus

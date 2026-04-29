@@ -1,4 +1,5 @@
 import AppKit
+import TempuraCore
 
 @MainActor
 final class SettingsWindowController: NSWindowController {
@@ -59,6 +60,7 @@ private final class SettingsViewController: NSViewController {
         target: nil,
         action: nil
     )
+    private let temperatureSourcePopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let versionLabel = NSTextField(labelWithString: "")
     private let updateButton = NSButton(title: "Check for Updates", target: nil, action: nil)
     private let quitButton = NSButton(title: "Quit Tempura", target: NSApp, action: #selector(NSApplication.terminate(_:)))
@@ -110,6 +112,7 @@ private final class SettingsViewController: NSViewController {
             title: "DISPLAY",
             views: [
                 makeTemperatureUnitRow(),
+                makeTemperatureSourceRow(),
                 makeMenuBarMetricsStack(),
                 makeMenuBarLabelStyleRow()
             ]
@@ -219,6 +222,18 @@ private final class SettingsViewController: NSViewController {
         temperatureUnitControl.setAccessibilityLabel("Temperature Unit")
         temperatureUnitControl.setAccessibilityHelp("Sets whether temperatures are shown in Celsius or Fahrenheit.")
 
+        temperatureSourcePopup.removeAllItems()
+        for sourceMode in TemperatureSourceMode.allCases {
+            temperatureSourcePopup.addItem(withTitle: sourceMode.displayName)
+            temperatureSourcePopup.lastItem?.representedObject = sourceMode.rawValue
+        }
+        temperatureSourcePopup.target = self
+        temperatureSourcePopup.action = #selector(changeTemperatureSource(_:))
+        temperatureSourcePopup.controlSize = .regular
+        temperatureSourcePopup.font = TempuraDesign.Font.button
+        temperatureSourcePopup.setAccessibilityLabel("Sensor Source")
+        temperatureSourcePopup.setAccessibilityHelp("Controls which sensor family drives Tempura's temperature reading.")
+
         versionLabel.font = TempuraDesign.Font.settingsVersion
         versionLabel.textColor = .secondaryLabelColor
 
@@ -306,6 +321,28 @@ private final class SettingsViewController: NSViewController {
         NSLayoutConstraint.activate([
             textStack.widthAnchor.constraint(greaterThanOrEqualToConstant: 250),
             temperatureUnitControl.widthAnchor.constraint(equalToConstant: 108)
+        ])
+
+        return row
+    }
+
+    private func makeTemperatureSourceRow() -> NSStackView {
+        let titleLabel = makeTitleLabel("Sensor Source")
+        let helpLabel = makeHelpLabel("Auto follows the hottest compute sensor. Pin it when you want one family only.")
+
+        let textStack = NSStackView(views: [titleLabel, helpLabel])
+        textStack.orientation = .vertical
+        textStack.alignment = .leading
+        textStack.spacing = 4
+
+        let row = NSStackView(views: [textStack, NSView(), temperatureSourcePopup])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = TempuraDesign.Layout.settingsRowSpacing
+
+        NSLayoutConstraint.activate([
+            textStack.widthAnchor.constraint(greaterThanOrEqualToConstant: 220),
+            temperatureSourcePopup.widthAnchor.constraint(equalToConstant: 158)
         ])
 
         return row
@@ -403,6 +440,7 @@ private final class SettingsViewController: NSViewController {
         launchAtLoginCheckbox.state = LaunchAtLoginController.isEnabled ? .on : .off
         launchAtLoginStatusLabel.stringValue = LaunchAtLoginController.statusMessage
         temperatureUnitControl.selectedSegment = TemperatureUnit.current == .celsius ? 0 : 1
+        selectTemperatureSource(TemperatureSourcePreference.current)
         let menuBarSettings = MenuBarDisplaySettings.current
         menuBarTemperatureCheckbox.state = menuBarSettings.showsTemperature ? .on : .off
         menuBarMemoryCheckbox.state = menuBarSettings.showsMemory ? .on : .off
@@ -411,6 +449,7 @@ private final class SettingsViewController: NSViewController {
             .firstIndex(of: menuBarSettings.memoryLabelStyle) ?? 1
         versionLabel.stringValue = applicationVersionText
         temperatureUnitControl.setAccessibilityValue(TemperatureUnit.current.displayName)
+        temperatureSourcePopup.setAccessibilityValue(TemperatureSourcePreference.current.displayName)
         menuBarLabelStyleControl.setAccessibilityValue(menuBarSettings.memoryLabelStyle.displayName)
         versionLabel.setAccessibilityLabel(applicationVersionText)
     }
@@ -427,6 +466,20 @@ private final class SettingsViewController: NSViewController {
 
     @objc private func changeTemperatureUnit(_ sender: NSSegmentedControl) {
         TemperatureUnit.current = sender.selectedSegment == 1 ? .fahrenheit : .celsius
+        refreshState()
+    }
+
+    @objc private func changeTemperatureSource(_ sender: NSPopUpButton) {
+        guard
+            let rawValue = sender.selectedItem?.representedObject as? String,
+            let sourceMode = TemperatureSourceMode(rawValue: rawValue)
+        else {
+            TemperatureSourcePreference.current = .automatic
+            refreshState()
+            return
+        }
+
+        TemperatureSourcePreference.current = sourceMode
         refreshState()
     }
 
@@ -452,6 +505,19 @@ private final class SettingsViewController: NSViewController {
             showsSwap: menuBarSwapCheckbox.state == .on,
             memoryLabelStyle: labelStyle
         )
+    }
+
+    private func selectTemperatureSource(_ sourceMode: TemperatureSourceMode) {
+        for (index, item) in temperatureSourcePopup.itemArray.enumerated() {
+            guard item.representedObject as? String == sourceMode.rawValue else {
+                continue
+            }
+
+            temperatureSourcePopup.selectItem(at: index)
+            return
+        }
+
+        temperatureSourcePopup.selectItem(at: 0)
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {
