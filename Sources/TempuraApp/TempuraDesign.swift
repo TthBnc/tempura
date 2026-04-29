@@ -33,9 +33,9 @@ enum TempuraDesign {
     }
 
     enum Layout {
-        static let panelWidth: CGFloat = 320
+        static let panelWidth: CGFloat = 360
         static let panelHeight: CGFloat = 484
-        static let panelExpandedHeight: CGFloat = 616
+        static let panelExpandedHeight: CGFloat = 630
         static let panelInset: CGFloat = 14
         static let panelContentInset: CGFloat = panelInset * 2
         static let panelSpacing: CGFloat = 10
@@ -43,7 +43,7 @@ enum TempuraDesign {
         static let temperatureStatsHeight: CGFloat = 34
         static let systemPressureHeight: CGFloat = 116
         static let detailControlHeight: CGFloat = 28
-        static let telemetryDetailsHeight: CGFloat = 122
+        static let telemetryDetailsHeight: CGFloat = 136
         static let cardHorizontalInset: CGFloat = 10
         static let cardVerticalInset: CGFloat = 8
         static let meterHeight: CGFloat = 5

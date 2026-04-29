@@ -17,7 +17,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var currentThrottleStatus = ThrottleStatus.unavailable
     private var currentMemoryStatus = MemoryUsageStatus.unavailable
     private var historyWindow = TemperatureHistoryWindow.current
-    private var history = TemperatureHistory(retention: TemperatureHistoryWindow.current.retention)
+    private var history = TemperatureHistory(retention: TemperatureHistoryWindow.maximumRetention)
     private var localDismissMonitor: Any?
     private var globalDismissMonitor: Any?
     private var temperatureUnit = TemperatureUnit.current
@@ -131,7 +131,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
             self.popover.contentSize = size
             self.popover.contentViewController?.preferredContentSize = size
-            self.activatePopoverWindow()
+            self.popover.contentViewController?.view.needsLayout = true
         }
         panelViewController.setTemperatureUnit(temperatureUnit)
         panelViewController.setHistoryWindow(historyWindow)
@@ -154,9 +154,10 @@ final class StatusController: NSObject, NSPopoverDelegate {
         temperatureUnit = unit
         panelViewController.setTemperatureUnit(unit)
         updateDisplay()
+        let visibleHistory = visibleHistory()
         panelViewController.update(
-            samples: history.samples,
-            temperatureStats: history.stats(),
+            samples: visibleHistory.samples,
+            temperatureStats: visibleHistory.stats(),
             currentReading: currentReading,
             throttleStatus: currentThrottleStatus,
             memoryStatus: currentMemoryStatus
@@ -187,13 +188,14 @@ final class StatusController: NSObject, NSPopoverDelegate {
         }
 
         temperatureSourceMode = sourceMode
-        history = TemperatureHistory(retention: historyWindow.retention)
+        history = TemperatureHistory(retention: TemperatureHistoryWindow.maximumRetention)
         currentReading = nil
         currentThrottleStatus = .unavailable
         updateDisplay()
+        let visibleHistory = visibleHistory()
         panelViewController.update(
-            samples: history.samples,
-            temperatureStats: history.stats(),
+            samples: visibleHistory.samples,
+            temperatureStats: visibleHistory.stats(),
             currentReading: currentReading,
             throttleStatus: currentThrottleStatus,
             memoryStatus: currentMemoryStatus
@@ -216,11 +218,11 @@ final class StatusController: NSObject, NSPopoverDelegate {
         }
 
         historyWindow = window
-        history = TemperatureHistory(retention: window.retention, samples: history.samples)
         panelViewController.setHistoryWindow(window)
+        let visibleHistory = visibleHistory()
         panelViewController.update(
-            samples: history.samples,
-            temperatureStats: history.stats(),
+            samples: visibleHistory.samples,
+            temperatureStats: visibleHistory.stats(),
             currentReading: currentReading,
             throttleStatus: currentThrottleStatus,
             memoryStatus: currentMemoryStatus
@@ -242,9 +244,10 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         NSApp.activate(ignoringOtherApps: true)
 
+        let visibleHistory = visibleHistory()
         panelViewController.update(
-            samples: history.samples,
-            temperatureStats: history.stats(),
+            samples: visibleHistory.samples,
+            temperatureStats: visibleHistory.stats(),
             currentReading: currentReading,
             throttleStatus: currentThrottleStatus,
             memoryStatus: currentMemoryStatus
@@ -379,22 +382,28 @@ final class StatusController: NSObject, NSPopoverDelegate {
                 self.currentReading = reading
                 self.history.record(reading)
                 self.currentMemoryStatus = memoryStatus
+                let throttleSamples = TemperatureHistoryWindow.oneMinute.history(from: self.history.samples).samples
                 self.currentThrottleStatus = ThrottleStatus(
                     reading: reading,
-                    samples: self.history.samples,
+                    samples: throttleSamples,
                     pressure: pressure,
                     thermalLimit: thermalLimit
                 )
                 self.updateDisplay()
+                let visibleHistory = self.visibleHistory()
                 self.panelViewController.update(
-                    samples: self.history.samples,
-                    temperatureStats: self.history.stats(),
+                    samples: visibleHistory.samples,
+                    temperatureStats: visibleHistory.stats(),
                     currentReading: reading,
                     throttleStatus: self.currentThrottleStatus,
                     memoryStatus: self.currentMemoryStatus
                 )
             }
         }
+    }
+
+    private func visibleHistory() -> TemperatureHistory {
+        historyWindow.history(from: history.samples)
     }
 
     private func updateDisplay() {

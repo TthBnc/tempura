@@ -14,6 +14,20 @@ final class ThermalChartView: NSView {
         }
     }
 
+    var historyWindow = TemperatureHistoryWindow.current {
+        didSet {
+            guard historyWindow != oldValue else {
+                return
+            }
+
+            suppressNextAnimation = true
+            stopAnimation()
+            presentationState = ChartState(samples: samples, timeSpan: historyWindow.retention)
+            needsDisplay = true
+            updateAccessibilityValue()
+        }
+    }
+
     var samples: [TemperatureSample] = [] {
         didSet {
             animateSamplesChange()
@@ -25,17 +39,25 @@ final class ThermalChartView: NSView {
         let samples: [TemperatureSample]
         let range: ClosedRange<Double>?
         let latestDate: Date
+        let timeSpan: TimeInterval
 
-        init(samples: [TemperatureSample]) {
+        init(samples: [TemperatureSample], timeSpan: TimeInterval = TemperatureHistoryWindow.current.retention) {
             self.samples = samples
-            range = TemperatureHistory(samples: samples).dynamicRange()
+            self.timeSpan = timeSpan
+            range = TemperatureHistory(retention: timeSpan, samples: samples).dynamicRange()
             latestDate = samples.last?.date ?? Date()
         }
 
-        init(samples: [TemperatureSample], range: ClosedRange<Double>?, latestDate: Date) {
+        init(
+            samples: [TemperatureSample],
+            range: ClosedRange<Double>?,
+            latestDate: Date,
+            timeSpan: TimeInterval
+        ) {
             self.samples = samples
             self.range = range
             self.latestDate = latestDate
+            self.timeSpan = timeSpan
         }
     }
 
@@ -44,6 +66,7 @@ final class ThermalChartView: NSView {
     private var animationTargetState: ChartState?
     private var animationStartTime: CFTimeInterval = 0
     private var animationTimer: Timer?
+    private var suppressNextAnimation = false
     private let animationDuration: CFTimeInterval = 0.42
 
     override var isFlipped: Bool {
@@ -100,14 +123,14 @@ final class ThermalChartView: NSView {
         }
 
         let latestText = temperatureUnit.formatted(celsius: latest.celsius)
-        guard let range = TemperatureHistory(samples: samples).dynamicRange() else {
+        guard let range = TemperatureHistory(retention: historyWindow.retention, samples: samples).dynamicRange() else {
             setAccessibilityValue("Latest \(latestText)")
             return
         }
 
         let lowText = temperatureUnit.formatted(celsius: range.lowerBound)
         let highText = temperatureUnit.formatted(celsius: range.upperBound)
-        setAccessibilityValue("Latest \(latestText), range \(lowText) to \(highText) over the last 60 seconds")
+        setAccessibilityValue("Latest \(latestText), range \(lowText) to \(highText) over \(historyWindow.accessibilityTitle.lowercased())")
     }
 
     private func drawBackground(in rect: NSRect) {
@@ -251,11 +274,12 @@ final class ThermalChartView: NSView {
             return []
         }
 
-        let startDate = state.latestDate.addingTimeInterval(-60)
+        let timeSpan = max(state.timeSpan, 1)
+        let startDate = state.latestDate.addingTimeInterval(-timeSpan)
         let span = max(range.upperBound - range.lowerBound, 1)
 
         return state.samples.map { sample in
-            let xProgress = min(max(sample.date.timeIntervalSince(startDate) / 60, 0), 1)
+            let xProgress = min(max(sample.date.timeIntervalSince(startDate) / timeSpan, 0), 1)
             let yProgress = min(max((sample.celsius - range.lowerBound) / span, 0), 1)
 
             return (
@@ -278,7 +302,15 @@ final class ThermalChartView: NSView {
     }
 
     private func animateSamplesChange() {
-        let targetState = ChartState(samples: samples)
+        let targetState = ChartState(samples: samples, timeSpan: historyWindow.retention)
+
+        if suppressNextAnimation {
+            suppressNextAnimation = false
+            stopAnimation()
+            presentationState = targetState
+            needsDisplay = true
+            return
+        }
 
         guard window != nil else {
             stopAnimation()
@@ -354,8 +386,9 @@ final class ThermalChartView: NSView {
         let samples = interpolatedSamples(from: start, to: target, progress: progress)
         let range = interpolatedRange(from: start.range, to: target.range, progress: progress)
         let latestDate = interpolatedDate(from: start.latestDate, to: target.latestDate, progress: progress)
+        let timeSpan = interpolate(from: start.timeSpan, to: target.timeSpan, progress: progress)
 
-        return ChartState(samples: samples, range: range, latestDate: latestDate)
+        return ChartState(samples: samples, range: range, latestDate: latestDate, timeSpan: timeSpan)
     }
 
     private static func interpolatedSamples(

@@ -107,7 +107,7 @@ final class ThermalPanelViewController: NSViewController {
             temperatureStatsView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.temperatureStatsHeight),
             systemPressureView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             systemPressureView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.systemPressureHeight),
-            detailsControl.widthAnchor.constraint(equalToConstant: 154),
+            detailsControl.widthAnchor.constraint(equalToConstant: 168),
             detailsControl.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.detailControlHeight),
             telemetryDetailsView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             telemetryDetailsView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.telemetryDetailsHeight),
@@ -126,6 +126,7 @@ final class ThermalPanelViewController: NSViewController {
 
     func setHistoryWindow(_ window: TemperatureHistoryWindow) {
         historyWindow = window
+        chartView.historyWindow = window
         selectHistoryWindow(window)
     }
 
@@ -193,8 +194,8 @@ final class ThermalPanelViewController: NSViewController {
         detailsControl.target = self
         detailsControl.action = #selector(detailsControlChanged(_:))
         detailsControl.segmentStyle = .rounded
-        detailsControl.setWidth(74, forSegment: 0)
-        detailsControl.setWidth(74, forSegment: 1)
+        detailsControl.setWidth(82, forSegment: 0)
+        detailsControl.setWidth(82, forSegment: 1)
         detailsControl.setAccessibilityLabel("Details")
         detailsControl.setAccessibilityHelp("Expands thermal or memory details.")
     }
@@ -279,7 +280,6 @@ final class ThermalPanelViewController: NSViewController {
                 : TempuraDesign.Layout.panelExpandedHeight
         )
         preferredContentSize = nextSize
-        view.frame.size = nextSize
 
         if notify {
             contentSizeDidChange?(nextSize)
@@ -396,7 +396,7 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
         let columnStack = NSStackView(views: [firstColumnStack, secondColumnStack])
         columnStack.orientation = .horizontal
         columnStack.alignment = .top
-        columnStack.spacing = 14
+        columnStack.spacing = 18
         columnStack.distribution = .fillEqually
 
         let stack = NSStackView(views: [titleLabel, columnStack])
@@ -433,7 +433,9 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
         }
 
         for row in rows {
-            stack.addArrangedSubview(makeRow(row))
+            let rowView = makeRow(row)
+            stack.addArrangedSubview(rowView)
+            rowView.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
     }
 
@@ -454,10 +456,7 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
         rowStack.alignment = .firstBaseline
         rowStack.spacing = 6
 
-        NSLayoutConstraint.activate([
-            rowStack.widthAnchor.constraint(equalToConstant: 124),
-            valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 48)
-        ])
+        valueLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 58).isActive = true
 
         return rowStack
     }
@@ -485,7 +484,7 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
         return [
             TelemetryDetailRow(title: "Sensor", value: sourceValue, tintColor: .labelColor),
             TelemetryDetailRow(title: "Source", value: groupValue, tintColor: .labelColor),
-            TelemetryDetailRow(title: "Sample", value: sampleAgeValue, tintColor: .labelColor),
+            TelemetryDetailRow(title: "Age", value: sampleAgeValue, tintColor: .labelColor),
             TelemetryDetailRow(
                 title: "Average",
                 value: stats.map { unit.formatted(celsius: $0.averageCelsius) } ?? "--",
@@ -509,7 +508,7 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
             return [
                 TelemetryDetailRow(title: "App", value: "--", tintColor: .tertiaryLabelColor),
                 TelemetryDetailRow(title: "Wired", value: "--", tintColor: .tertiaryLabelColor),
-                TelemetryDetailRow(title: "Compressed", value: "--", tintColor: .tertiaryLabelColor),
+                TelemetryDetailRow(title: "Comp.", value: "--", tintColor: .tertiaryLabelColor),
                 TelemetryDetailRow(title: "Cached", value: "--", tintColor: .tertiaryLabelColor),
                 TelemetryDetailRow(title: "Swap", value: "--", tintColor: .tertiaryLabelColor),
                 TelemetryDetailRow(title: "Pressure", value: "--", tintColor: .tertiaryLabelColor)
@@ -519,7 +518,7 @@ private final class TelemetryDetailsView: TempuraGlassCardView {
         return [
             TelemetryDetailRow(title: "App", value: status.appMemoryTitle, tintColor: .labelColor),
             TelemetryDetailRow(title: "Wired", value: status.wiredMemoryTitle, tintColor: .labelColor),
-            TelemetryDetailRow(title: "Compressed", value: status.compressedMemoryTitle, tintColor: .labelColor),
+            TelemetryDetailRow(title: "Comp.", value: status.compressedMemoryTitle, tintColor: .labelColor),
             TelemetryDetailRow(title: "Cached", value: status.cachedMemoryTitle, tintColor: .labelColor),
             TelemetryDetailRow(title: "Swap", value: status.swapUsedTitle, tintColor: status.swapLevel.tintColor),
             TelemetryDetailRow(title: "Pressure", value: status.pressureLevel.title, tintColor: status.pressureLevel.tintColor)

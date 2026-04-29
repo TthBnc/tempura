@@ -1,4 +1,5 @@
 import Foundation
+import TempuraCore
 
 enum TemperatureHistoryWindow: Int, CaseIterable {
     case oneMinute = 60
@@ -6,6 +7,7 @@ enum TemperatureHistoryWindow: Int, CaseIterable {
     case fifteenMinutes = 900
 
     private static let defaultsKey = "temperatureHistoryWindow"
+    static let maximumRetention = TimeInterval(900)
 
     static var current: TemperatureHistoryWindow {
         get {
@@ -46,6 +48,13 @@ enum TemperatureHistoryWindow: Int, CaseIterable {
         case .fifteenMinutes:
             return "Last 15 minutes"
         }
+    }
+
+    func history(from samples: [TemperatureSample]) -> TemperatureHistory {
+        let now = Date()
+        let oldestAllowedDate = now.addingTimeInterval(-retention)
+        let visibleSamples = samples.filter { $0.date >= oldestAllowedDate }
+        return TemperatureHistory(retention: retention, samples: visibleSamples)
     }
 }
 
