@@ -13,6 +13,12 @@ final class ThermalPanelViewController: NSViewController {
 
     private let currentValueLabel = NSTextField(labelWithString: "--°C")
     private let sourceLabel = NSTextField(labelWithString: "No reading")
+    private let historyWindowControl = NSSegmentedControl(
+        labels: TemperatureHistoryWindow.allCases.map(\.displayName),
+        trackingMode: .selectOne,
+        target: nil,
+        action: nil
+    )
     private let chartView = ThermalChartView()
     private let temperatureStatsView = TemperatureStatsStripView()
     private let systemPressureView = SystemPressureView()
@@ -26,6 +32,7 @@ final class ThermalPanelViewController: NSViewController {
     private let settingsButton = NSButton()
     private let quitButton = NSButton()
     private var temperatureUnit = TemperatureUnit.current
+    private var historyWindow = TemperatureHistoryWindow.current
     private var detailsMode = TelemetryDetailsMode.none
     private var currentReading: TemperatureReading?
     private var currentMemoryStatus = MemoryUsageStatus.unavailable
@@ -40,16 +47,13 @@ final class ThermalPanelViewController: NSViewController {
         configureLabels()
         configureButtons()
         configureDetailsControl()
+        configureHistoryWindowControl()
 
         let titleLabel = NSTextField(labelWithString: "Thermal")
         titleLabel.font = TempuraDesign.Font.panelTitle
         titleLabel.textColor = .secondaryLabelColor
 
-        let windowLabel = NSTextField(labelWithString: "Last 60s")
-        windowLabel.font = TempuraDesign.Font.panelWindow
-        windowLabel.textColor = .tertiaryLabelColor
-
-        let headerStack = NSStackView(views: [titleLabel, NSView(), windowLabel])
+        let headerStack = NSStackView(views: [titleLabel, NSView(), historyWindowControl])
         headerStack.orientation = .horizontal
         headerStack.alignment = .centerY
 
@@ -98,6 +102,7 @@ final class ThermalPanelViewController: NSViewController {
             valueStack.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             chartView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             chartView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.chartHeight),
+            historyWindowControl.widthAnchor.constraint(equalToConstant: 126),
             temperatureStatsView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
             temperatureStatsView.heightAnchor.constraint(equalToConstant: TempuraDesign.Layout.temperatureStatsHeight),
             systemPressureView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -TempuraDesign.Layout.panelContentInset),
@@ -117,6 +122,11 @@ final class ThermalPanelViewController: NSViewController {
         temperatureUnit = unit
         chartView.temperatureUnit = unit
         temperatureStatsView.temperatureUnit = unit
+    }
+
+    func setHistoryWindow(_ window: TemperatureHistoryWindow) {
+        historyWindow = window
+        selectHistoryWindow(window)
     }
 
     func update(
@@ -187,6 +197,20 @@ final class ThermalPanelViewController: NSViewController {
         detailsControl.setWidth(74, forSegment: 1)
         detailsControl.setAccessibilityLabel("Details")
         detailsControl.setAccessibilityHelp("Expands thermal or memory details.")
+    }
+
+    private func configureHistoryWindowControl() {
+        historyWindowControl.target = self
+        historyWindowControl.action = #selector(historyWindowControlChanged(_:))
+        historyWindowControl.segmentStyle = .rounded
+        historyWindowControl.controlSize = .small
+        historyWindowControl.toolTip = "Choose the chart history window"
+        historyWindowControl.setWidth(42, forSegment: 0)
+        historyWindowControl.setWidth(40, forSegment: 1)
+        historyWindowControl.setWidth(40, forSegment: 2)
+        historyWindowControl.setAccessibilityLabel("History Window")
+        historyWindowControl.setAccessibilityHelp("Changes the chart and summary time window.")
+        selectHistoryWindow(historyWindow)
     }
 
     private func configureUtilityButton(
@@ -269,6 +293,25 @@ final class ThermalPanelViewController: NSViewController {
     @objc private func detailsControlChanged(_ sender: NSSegmentedControl) {
         let selectedMode = TelemetryDetailsMode.mode(forSegment: sender.selectedSegment)
         updateDetailsMode(selectedMode == detailsMode ? .none : selectedMode)
+    }
+
+    @objc private func historyWindowControlChanged(_ sender: NSSegmentedControl) {
+        let index = sender.selectedSegment
+        guard TemperatureHistoryWindow.allCases.indices.contains(index) else {
+            setHistoryWindow(.oneMinute)
+            TemperatureHistoryWindow.current = .oneMinute
+            return
+        }
+
+        let window = TemperatureHistoryWindow.allCases[index]
+        historyWindow = window
+        historyWindowControl.setAccessibilityValue(window.accessibilityTitle)
+        TemperatureHistoryWindow.current = window
+    }
+
+    private func selectHistoryWindow(_ window: TemperatureHistoryWindow) {
+        historyWindowControl.selectedSegment = TemperatureHistoryWindow.allCases.firstIndex(of: window) ?? 0
+        historyWindowControl.setAccessibilityValue(window.accessibilityTitle)
     }
 }
 

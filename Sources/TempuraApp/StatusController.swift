@@ -16,7 +16,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var currentReading: TemperatureReading?
     private var currentThrottleStatus = ThrottleStatus.unavailable
     private var currentMemoryStatus = MemoryUsageStatus.unavailable
-    private var history = TemperatureHistory(retention: 60)
+    private var historyWindow = TemperatureHistoryWindow.current
+    private var history = TemperatureHistory(retention: TemperatureHistoryWindow.current.retention)
     private var localDismissMonitor: Any?
     private var globalDismissMonitor: Any?
     private var temperatureUnit = TemperatureUnit.current
@@ -36,6 +37,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         configureTemperatureUnitObserver()
         configureMenuBarSettingsObserver()
         configureTemperatureSourceModeObserver()
+        configureHistoryWindowObserver()
         updateDisplay()
         readTemperature()
 
@@ -132,6 +134,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
             self.activatePopoverWindow()
         }
         panelViewController.setTemperatureUnit(temperatureUnit)
+        panelViewController.setHistoryWindow(historyWindow)
     }
 
     private func configureTemperatureUnitObserver() {
@@ -184,7 +187,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         }
 
         temperatureSourceMode = sourceMode
-        history = TemperatureHistory(retention: history.retention)
+        history = TemperatureHistory(retention: historyWindow.retention)
         currentReading = nil
         currentThrottleStatus = .unavailable
         updateDisplay()
@@ -196,6 +199,32 @@ final class StatusController: NSObject, NSPopoverDelegate {
             memoryStatus: currentMemoryStatus
         )
         readTemperature()
+    }
+
+    private func configureHistoryWindowObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(historyWindowDidChange(_:)),
+            name: .temperatureHistoryWindowDidChange,
+            object: nil
+        )
+    }
+
+    @objc private func historyWindowDidChange(_ notification: Notification) {
+        guard let window = notification.object as? TemperatureHistoryWindow else {
+            return
+        }
+
+        historyWindow = window
+        history = TemperatureHistory(retention: window.retention, samples: history.samples)
+        panelViewController.setHistoryWindow(window)
+        panelViewController.update(
+            samples: history.samples,
+            temperatureStats: history.stats(),
+            currentReading: currentReading,
+            throttleStatus: currentThrottleStatus,
+            memoryStatus: currentMemoryStatus
+        )
     }
 
     private func togglePanel() {
