@@ -37,6 +37,13 @@ public struct TemperatureReading: Codable, Sendable {
 
 public protocol TemperatureReadingProvider: Sendable {
     func readCurrentTemperature() -> TemperatureReading?
+    func readTemperature(sourceMode: TemperatureSourceMode) -> TemperatureReading?
+}
+
+public extension TemperatureReadingProvider {
+    func readTemperature(sourceMode: TemperatureSourceMode) -> TemperatureReading? {
+        readCurrentTemperature()
+    }
 }
 
 public struct UnavailableTemperatureProvider: TemperatureReadingProvider {

@@ -40,3 +40,19 @@ func enforcesMinimumRangeSpan() throws {
     #expect(range.lowerBound == 56.5)
     #expect(range.upperBound == 64.5)
 }
+
+@Test("Temperature history summarizes average peak and low")
+func summarizesAveragePeakAndLow() throws {
+    let now = Date(timeIntervalSinceReferenceDate: 1_000)
+    var history = TemperatureHistory(retention: 60)
+
+    history.record(celsius: 60, date: now)
+    history.record(celsius: 66, date: now.addingTimeInterval(5))
+    history.record(celsius: 72, date: now.addingTimeInterval(10))
+
+    let stats = try #require(history.stats())
+    #expect(stats.averageCelsius == 66)
+    #expect(stats.peakCelsius == 72)
+    #expect(stats.lowCelsius == 60)
+    #expect(stats.sampleCount == 3)
+}

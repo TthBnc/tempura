@@ -36,6 +36,46 @@ func fallsBackToScannedTemperature() throws {
     #expect(reading.sourceGroup == .unknown)
 }
 
+@Test("Selects average CPU source mode")
+func selectsAverageCPUSourceMode() throws {
+    let provider = SMCTemperatureReadingProvider(
+        machine: m5Machine,
+        smcClient: MockSMCReadingClient(
+            keys: ["Tp00", "Tp04", "Tg0U"],
+            values: [
+                "Tp00": 60,
+                "Tp04": 72,
+                "Tg0U": 80
+            ]
+        )
+    )
+
+    let reading = try #require(provider.readTemperature(sourceMode: .averageCPU))
+    #expect(reading.celsius == 66)
+    #expect(reading.sourceKey == "CPU")
+    #expect(reading.sourceName == "Average CPU")
+    #expect(reading.sourceGroup == .cpu)
+}
+
+@Test("Selects hottest GPU source mode")
+func selectsHottestGPUSourceMode() throws {
+    let provider = SMCTemperatureReadingProvider(
+        machine: m5Machine,
+        smcClient: MockSMCReadingClient(
+            keys: ["Tp00", "Tg0U", "Tg0X"],
+            values: [
+                "Tp00": 82,
+                "Tg0U": 64,
+                "Tg0X": 69
+            ]
+        )
+    )
+
+    let reading = try #require(provider.readTemperature(sourceMode: .hottestGPU))
+    #expect(reading.sourceKey == "Tg0X")
+    #expect(reading.sourceGroup == .gpu)
+}
+
 @Test("Rejects implausible temperature values")
 func rejectsImplausibleTemperatures() {
     let provider = SMCTemperatureReadingProvider(

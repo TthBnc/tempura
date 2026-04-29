@@ -16,11 +16,19 @@ public final class SMCTemperatureReadingProvider: TemperatureReadingProvider, @u
     }
 
     public func readCurrentTemperature() -> TemperatureReading? {
+        readTemperature(sourceMode: .automatic)
+    }
+
+    public func readTemperature(sourceMode: TemperatureSourceMode) -> TemperatureReading? {
         let knownCandidates = SensorCatalog.knownCandidates(
             for: machine.chipGeneration,
             allKeys: allKeys()
         )
         let knownReadings = read(candidates: knownCandidates)
+
+        if sourceMode != .automatic {
+            return resolveSpecificReading(sourceMode, from: knownReadings)
+        }
 
         if let computeReading = hottest(knownReadings.filter { $0.sourceGroup.isComputeRelated }) {
             return computeReading
@@ -95,6 +103,47 @@ public final class SMCTemperatureReadingProvider: TemperatureReadingProvider, @u
 
     private func hottest(_ readings: [TemperatureReading]) -> TemperatureReading? {
         readings.max { $0.celsius < $1.celsius }
+    }
+
+    private func resolveSpecificReading(
+        _ sourceMode: TemperatureSourceMode,
+        from readings: [TemperatureReading]
+    ) -> TemperatureReading? {
+        switch sourceMode {
+        case .automatic:
+            return nil
+        case .hottestCPU:
+            return hottest(readings.filter { $0.sourceGroup == .cpu })
+        case .averageCPU:
+            return average(readings.filter { $0.sourceGroup == .cpu }, sourceKey: "CPU", sourceName: "Average CPU", sourceGroup: .cpu)
+        case .hottestGPU:
+            return hottest(readings.filter { $0.sourceGroup == .gpu })
+        case .averageGPU:
+            return average(readings.filter { $0.sourceGroup == .gpu }, sourceKey: "GPU", sourceName: "Average GPU", sourceGroup: .gpu)
+        case .hottestSoC:
+            return hottest(readings.filter { $0.sourceGroup == .soc })
+        case .averageSoC:
+            return average(readings.filter { $0.sourceGroup == .soc }, sourceKey: "SoC", sourceName: "Average SoC", sourceGroup: .soc)
+        }
+    }
+
+    private func average(
+        _ readings: [TemperatureReading],
+        sourceKey: String,
+        sourceName: String,
+        sourceGroup: TemperatureGroup
+    ) -> TemperatureReading? {
+        guard !readings.isEmpty else {
+            return nil
+        }
+
+        let celsius = readings.map(\.celsius).reduce(0, +) / Double(readings.count)
+        return TemperatureReading(
+            celsius: celsius,
+            sourceKey: sourceKey,
+            sourceName: sourceName,
+            sourceGroup: sourceGroup
+        )
     }
 
     private func isValidTemperature(_ celsius: Double) -> Bool {

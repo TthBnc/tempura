@@ -10,6 +10,20 @@ public struct TemperatureSample: Codable, Equatable, Sendable {
     }
 }
 
+public struct TemperatureHistoryStats: Equatable, Sendable {
+    public let averageCelsius: Double
+    public let peakCelsius: Double
+    public let lowCelsius: Double
+    public let sampleCount: Int
+
+    public init(averageCelsius: Double, peakCelsius: Double, lowCelsius: Double, sampleCount: Int) {
+        self.averageCelsius = averageCelsius
+        self.peakCelsius = peakCelsius
+        self.lowCelsius = lowCelsius
+        self.sampleCount = sampleCount
+    }
+}
+
 public struct TemperatureHistory: Sendable {
     public let retention: TimeInterval
     public private(set) var samples: [TemperatureSample]
@@ -62,5 +76,23 @@ public struct TemperatureHistory: Sendable {
 
         let halfSpan = minimumSpan / 2
         return (midpoint - halfSpan)...(midpoint + halfSpan)
+    }
+
+    public func stats() -> TemperatureHistoryStats? {
+        guard
+            let minimum = samples.map(\.celsius).min(),
+            let maximum = samples.map(\.celsius).max(),
+            !samples.isEmpty
+        else {
+            return nil
+        }
+
+        let average = samples.map(\.celsius).reduce(0, +) / Double(samples.count)
+        return TemperatureHistoryStats(
+            averageCelsius: average,
+            peakCelsius: maximum,
+            lowCelsius: minimum,
+            sampleCount: samples.count
+        )
     }
 }
