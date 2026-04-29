@@ -8,7 +8,7 @@ Tempura is a native macOS menu bar utility that shows one representative hardwar
 
 Download the latest release:
 
-[Tempura 0.5.1](https://github.com/TthBnc/tempura/releases/tag/v0.5.1)
+[Tempura 0.6.0](https://github.com/TthBnc/tempura/releases/tag/v0.6.0)
 
 Install from the DMG:
 
@@ -42,10 +42,12 @@ Tempura requires macOS 13 Ventura or newer on an Apple Silicon Mac.
 
 - Shows live temperature, memory, and swap metrics in the macOS menu bar.
 - Opens a compact panel with the last 60 seconds of local thermal history.
+- Shows average, peak, and low temperature over the current one-minute window.
 - Colors readings by temperature range.
 - Supports Celsius and Fahrenheit display units.
+- Lets you choose the temperature source family: automatic, hottest/average CPU, GPU, or SoC.
 - Lets you choose which menu bar metrics appear and how memory/swap labels are formatted.
-- Shows memory usage, swap overflow, and thermal throttle risk in the panel.
+- Shows memory usage, native macOS memory pressure, swap overflow, and thermal throttle risk in the panel.
 - Uses native Liquid Glass surfaces on macOS 26 and a compatible glass fallback on macOS 13-25.
 - Can open automatically when you log in.
 - Shows version details and checks for updates from a separate settings window only when requested.
