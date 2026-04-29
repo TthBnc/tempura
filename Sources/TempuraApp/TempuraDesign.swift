@@ -13,6 +13,8 @@ enum TempuraDesign {
         static var statCaption: NSFont { NSFont.systemFont(ofSize: 10.5, weight: .semibold) }
         static var statValue: NSFont { NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold) }
         static var cardDetail: NSFont { NSFont.systemFont(ofSize: 10.5, weight: .regular) }
+        static var detailLabel: NSFont { NSFont.systemFont(ofSize: 10.5, weight: .semibold) }
+        static var detailValue: NSFont { NSFont.monospacedDigitSystemFont(ofSize: 11.5, weight: .medium) }
         static var button: NSFont { NSFont.systemFont(ofSize: 13, weight: .regular) }
         static var buttonStrong: NSFont { NSFont.systemFont(ofSize: 13, weight: .medium) }
         static var settingsTitle: NSFont { NSFont.systemFont(ofSize: 13, weight: .semibold) }
@@ -32,13 +34,16 @@ enum TempuraDesign {
 
     enum Layout {
         static let panelWidth: CGFloat = 320
-        static let panelHeight: CGFloat = 444
+        static let panelHeight: CGFloat = 484
+        static let panelExpandedHeight: CGFloat = 616
         static let panelInset: CGFloat = 14
         static let panelContentInset: CGFloat = panelInset * 2
         static let panelSpacing: CGFloat = 10
         static let chartHeight: CGFloat = 112
         static let temperatureStatsHeight: CGFloat = 34
         static let systemPressureHeight: CGFloat = 116
+        static let detailControlHeight: CGFloat = 28
+        static let telemetryDetailsHeight: CGFloat = 122
         static let cardHorizontalInset: CGFloat = 10
         static let cardVerticalInset: CGFloat = 8
         static let meterHeight: CGFloat = 5

@@ -188,13 +188,45 @@ struct MemoryUsageStatus: Equatable {
             return "Waiting for memory data"
         }
 
-        let memoryText = "\(Self.formatBytes(usedBytes)) of \(Self.formatBytes(physicalBytes))"
+        let memoryText = "\(usedMemoryTitle) of \(physicalMemoryTitle)"
         let swapText = swapTotalBytes == nil
             ? "swap unavailable"
-            : "\(Self.formatBytes(swapUsedBytes)) swap"
-        let cacheText = "\(Self.formatBytes(cachedBytes)) cached"
+            : "\(swapUsedTitle) swap"
+        let cacheText = "\(cachedMemoryTitle) cached"
 
         return "\(memoryText) · \(cacheText) · \(pressureLevel.detailTitle) · \(swapText)"
+    }
+
+    var physicalMemoryTitle: String {
+        Self.formatBytes(physicalBytes)
+    }
+
+    var usedMemoryTitle: String {
+        Self.formatBytes(usedBytes)
+    }
+
+    var appMemoryTitle: String {
+        Self.formatBytes(appBytes)
+    }
+
+    var wiredMemoryTitle: String {
+        Self.formatBytes(wiredBytes)
+    }
+
+    var compressedMemoryTitle: String {
+        Self.formatBytes(compressedBytes)
+    }
+
+    var cachedMemoryTitle: String {
+        Self.formatBytes(cachedBytes)
+    }
+
+    var swapUsedTitle: String {
+        Self.formatBytes(swapUsedBytes)
+    }
+
+    var swapTotalTitle: String {
+        swapTotalBytes.map(Self.formatBytes) ?? "--"
     }
 
     private func fraction(numerator: UInt64, denominator: UInt64) -> Double {
