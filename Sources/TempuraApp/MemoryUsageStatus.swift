@@ -34,18 +34,87 @@ enum MemoryUsageLevel: Int, Equatable {
     }
 }
 
+enum NativeMemoryPressureLevel: Int, Equatable {
+    case unavailable = -1
+    case normal = 0
+    case warning = 2
+    case critical = 4
+
+    var title: String {
+        switch self {
+        case .unavailable:
+            return "--"
+        case .normal:
+            return "Normal"
+        case .warning:
+            return "Warning"
+        case .critical:
+            return "Critical"
+        }
+    }
+
+    var detailTitle: String {
+        switch self {
+        case .unavailable:
+            return "memory pressure unavailable"
+        case .normal:
+            return "normal memory pressure"
+        case .warning:
+            return "warning memory pressure"
+        case .critical:
+            return "critical memory pressure"
+        }
+    }
+
+    var tintColor: NSColor {
+        switch self {
+        case .unavailable:
+            return .disabledControlTextColor
+        case .normal:
+            return TempuraDesign.Color.statusNormal
+        case .warning:
+            return TempuraDesign.Color.statusWarm
+        case .critical:
+            return TempuraDesign.Color.statusHot
+        }
+    }
+
+    var progress: Double {
+        switch self {
+        case .unavailable:
+            return 0.08
+        case .normal:
+            return 0.22
+        case .warning:
+            return 0.64
+        case .critical:
+            return 1.0
+        }
+    }
+}
+
 struct MemoryUsageStatus: Equatable {
     let physicalBytes: UInt64
     let usedBytes: UInt64
+    let appBytes: UInt64
+    let wiredBytes: UInt64
+    let compressedBytes: UInt64
+    let cachedBytes: UInt64
     let swapUsedBytes: UInt64
     let swapTotalBytes: UInt64?
+    let pressureLevel: NativeMemoryPressureLevel
 
     static var unavailable: MemoryUsageStatus {
         MemoryUsageStatus(
             physicalBytes: 0,
             usedBytes: 0,
+            appBytes: 0,
+            wiredBytes: 0,
+            compressedBytes: 0,
+            cachedBytes: 0,
             swapUsedBytes: 0,
-            swapTotalBytes: nil
+            swapTotalBytes: nil,
+            pressureLevel: .unavailable
         )
     }
 
@@ -110,8 +179,9 @@ struct MemoryUsageStatus: Equatable {
         let swapText = swapTotalBytes == nil
             ? "swap unavailable"
             : "\(Self.formatBytes(swapUsedBytes)) swap"
+        let cacheText = "\(Self.formatBytes(cachedBytes)) cached"
 
-        return "\(memoryText) · \(swapText)"
+        return "\(memoryText) · \(cacheText) · \(pressureLevel.detailTitle) · \(swapText)"
     }
 
     private func fraction(numerator: UInt64, denominator: UInt64) -> Double {
@@ -142,10 +212,7 @@ struct MemoryUsageReader {
     static func readCurrent() -> MemoryUsageStatus {
         let physicalBytes = ProcessInfo.processInfo.physicalMemory
 
-        guard
-            physicalBytes > 0,
-            let usedBytes = readUsedMemoryBytes(physicalBytes: physicalBytes)
-        else {
+        guard physicalBytes > 0, let breakdown = readMemoryBreakdown(physicalBytes: physicalBytes) else {
             return .unavailable
         }
 
@@ -153,24 +220,58 @@ struct MemoryUsageReader {
 
         return MemoryUsageStatus(
             physicalBytes: physicalBytes,
-            usedBytes: usedBytes,
+            usedBytes: breakdown.usedBytes,
+            appBytes: breakdown.appBytes,
+            wiredBytes: breakdown.wiredBytes,
+            compressedBytes: breakdown.compressedBytes,
+            cachedBytes: breakdown.cachedBytes,
             swapUsedBytes: swapUsage?.usedBytes ?? 0,
-            swapTotalBytes: swapUsage?.totalBytes
+            swapTotalBytes: swapUsage?.totalBytes,
+            pressureLevel: readMemoryPressureLevel()
         )
     }
 
-    private static func readUsedMemoryBytes(physicalBytes: UInt64) -> UInt64? {
+    private static func readMemoryBreakdown(physicalBytes: UInt64) -> MemoryBreakdown? {
         guard let snapshot = readVirtualMemorySnapshot() else {
             return nil
         }
 
         // Match Activity Monitor's useful "Memory Used" shape by excluding cached file-backed pages.
-        let usedPages = UInt64(snapshot.statistics.internal_page_count)
-            + UInt64(snapshot.statistics.wire_count)
-            + UInt64(snapshot.statistics.compressor_page_count)
-        let usedBytes = usedPages * UInt64(snapshot.pageSize)
+        let pageSize = UInt64(snapshot.pageSize)
+        let appBytes = UInt64(snapshot.statistics.internal_page_count) * pageSize
+        let wiredBytes = UInt64(snapshot.statistics.wire_count) * pageSize
+        let compressedBytes = UInt64(snapshot.statistics.compressor_page_count) * pageSize
+        let cachedBytes = (
+            UInt64(snapshot.statistics.purgeable_count)
+                + UInt64(snapshot.statistics.external_page_count)
+        ) * pageSize
+        let usedBytes = min(appBytes + wiredBytes + compressedBytes, physicalBytes)
 
-        return min(usedBytes, physicalBytes)
+        return MemoryBreakdown(
+            usedBytes: usedBytes,
+            appBytes: min(appBytes, usedBytes),
+            wiredBytes: min(wiredBytes, usedBytes),
+            compressedBytes: min(compressedBytes, usedBytes),
+            cachedBytes: cachedBytes
+        )
+    }
+
+    private static func readMemoryPressureLevel() -> NativeMemoryPressureLevel {
+        var pressureLevel: Int32 = 0
+        var size = MemoryLayout<Int32>.stride
+
+        guard sysctlbyname("kern.memorystatus_vm_pressure_level", &pressureLevel, &size, nil, 0) == 0 else {
+            return .unavailable
+        }
+
+        switch pressureLevel {
+        case 2:
+            return .warning
+        case 4:
+            return .critical
+        default:
+            return .normal
+        }
     }
 
     private static func readVirtualMemorySnapshot() -> VirtualMemorySnapshot? {
@@ -220,6 +321,14 @@ struct MemoryUsageReader {
 private struct VirtualMemorySnapshot {
     let statistics: vm_statistics64
     let pageSize: vm_size_t
+}
+
+private struct MemoryBreakdown {
+    let usedBytes: UInt64
+    let appBytes: UInt64
+    let wiredBytes: UInt64
+    let compressedBytes: UInt64
+    let cachedBytes: UInt64
 }
 
 private struct SwapUsage {
